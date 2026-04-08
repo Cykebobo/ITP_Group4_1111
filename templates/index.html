@@ -34,3 +34,1282 @@
       --island-width: 124px;
       --island-height: 36px;
       --shell-radius: 64px;
+      --screen-radius: 50px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:var(--desk);color:var(--text)}
+    body{
+      min-height:100vh;
+      display:grid;
+      place-items:center;
+      padding:24px;
+      overflow:hidden;
+    }
+
+    .device-shell{
+      width:min(calc(100vw - 48px), calc(var(--device-width) * 1px));
+      height:min(calc(100vh - 48px), calc(var(--device-height) * 1px));
+      display:grid;
+      place-items:center;
+    }
+    .browser-side-note{position:fixed;right:calc(50% + 300px);top:50%;transform:translateY(-50%);width:520px;padding:28px 30px;border-radius:24px;background:rgba(255,255,255,.72);border:1px solid rgba(132,186,158,.38);font-size:28px;line-height:1.85;color:#000;white-space:pre-line;box-shadow:0 14px 30px rgba(20,58,40,.08);backdrop-filter:blur(12px) saturate(115%);-webkit-backdrop-filter:blur(12px) saturate(115%);z-index:12}
+
+    .device{
+      width:calc(var(--device-width) * 1px);
+      height:calc(var(--device-height) * 1px);
+      transform:scale(min(calc((100vw - 48px) / var(--device-width)), calc((100vh - 48px) / var(--device-height)), 1));
+      transform-origin:center center;
+      background:
+        linear-gradient(180deg, #1b1b1d 0%, #09090a 32%, #020203 100%);
+      border-radius:var(--shell-radius);
+      padding:11px;
+      position:relative;
+      box-shadow:var(--shadow);
+      border:1px solid #0f0f10;
+      overflow:hidden;
+    }
+    .device::before{
+      content:"";
+      position:absolute;inset:0;border-radius:var(--shell-radius);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.06),
+        inset 0 0 0 10px rgba(255,255,255,.012),
+        inset 0 1px 0 rgba(255,255,255,.05);
+      pointer-events:none;
+    }
+    .device::after{
+      content:"";
+      position:absolute;left:50%;top:18px;transform:translateX(-50%);
+      width:var(--island-width);height:var(--island-height);border-radius:22px;
+      background:linear-gradient(180deg,#080808,#020202 70%);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.07), 0 1px 0 rgba(0,0,0,.65);
+      z-index:8;
+    }
+    .side-btn{position:absolute;background:linear-gradient(180deg,#2a2a2c,#121214);border-radius:4px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05)}
+    .side-btn.left.one{left:1px;top:176px;width:4px;height:46px}
+    .side-btn.left.two{left:1px;top:236px;width:4px;height:84px}
+    .side-btn.right{right:1px;top:208px;width:4px;height:112px}
+
+    .screen{
+      height:100%;
+      border-radius:calc(var(--screen-radius) - 1px);
+      overflow:hidden;
+      position:relative;
+      background:#f9fcfa;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .statusbar{
+      height:var(--safe-top);
+      padding:20px 34px 0;
+      display:flex;justify-content:space-between;align-items:flex-start;
+      font-size:18px;font-weight:820;color:#000;
+      letter-spacing:-.01em;
+      position:relative;z-index:2;
+    }
+    .status-time{margin-left:8px}
+    .status-icons{display:flex;align-items:center;gap:10px}
+    .status-pill{width:28px;height:14px;border-radius:999px;border:2px solid #8aa195;position:relative;transform:rotate(180deg)}
+    .status-pill::after{content:"";position:absolute;right:1px;top:1px;bottom:1px;width:15px;background:#8aa195;border-radius:999px}
+    .status-signal{display:inline-flex;gap:2px;align-items:flex-end;height:14px}
+    .status-signal i{display:block;width:2.8px;background:#8aa195;border-radius:2px}
+    .status-signal i:nth-child(1){height:6px}.status-signal i:nth-child(2){height:8px}.status-signal i:nth-child(3){height:11px}.status-signal i:nth-child(4){height:14px}
+
+    .header{
+      padding:0 18px 8px;
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      position:relative;z-index:2;
+      border-bottom:1px solid rgba(235,242,238,.92);
+      margin-bottom:12px;
+    }
+    .brand{display:flex;align-items:center;gap:8px;min-width:0}
+    .brand-logo{width:60px;height:60px;border-radius:16px;display:block;transform:translateX(-12px) scale(1.72);transform-origin:left center}
+    .brand-copy{min-width:0;transform:translateX(4px)}
+    .eyebrow{display:block;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+    .title{margin:0;font-size:20px;line-height:1.03;font-weight:700;letter-spacing:-.02em}
+    .subtitle{margin-top:4px;font-size:12px;color:var(--muted)}
+    .header-actions{display:flex;gap:8px;align-items:center;transform:translateX(-10px)}
+    .btn{border:none;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:600;cursor:pointer}
+    .btn.secondary{background:linear-gradient(180deg,rgba(198,208,202,.92) 0%, rgba(222,228,224,.94) 52%, rgba(246,249,247,.98) 100%);border:1px solid rgba(166,181,172,.92);color:#000;box-shadow:0 10px 20px rgba(16,32,24,.10), inset 0 1px 0 rgba(255,255,255,.58), inset 0 -8px 18px rgba(255,255,255,.18);backdrop-filter:blur(16px) saturate(125%);-webkit-backdrop-filter:blur(16px) saturate(125%)}
+    .btn.primary{background:linear-gradient(180deg,rgba(126,224,169,.92) 0%, rgba(173,242,204,.94) 44%, rgba(210,251,228,.96) 78%, rgba(239,255,248,.98) 100%);color:#000;border:1px solid rgba(67,203,138,.72);box-shadow:0 10px 20px rgba(14,81,51,.12), inset 0 1px 0 rgba(255,255,255,.50), inset 0 -10px 18px rgba(255,255,255,.16);backdrop-filter:blur(16px) saturate(128%);-webkit-backdrop-filter:blur(16px) saturate(128%);-webkit-text-stroke:0;text-shadow:none}
+
+    .pages{position:relative;flex:1;min-height:0}
+    .page{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden}
+    .page.active{display:flex}
+    .scroll{
+      flex:1;overflow:auto;scrollbar-width:none;
+      padding:0 18px calc(var(--nav-height) + var(--safe-bottom) + 18px);
+    }
+    #page-home .scroll{
+      clip-path:inset(0 0 0 0 round 0 0 var(--screen-radius) var(--screen-radius));
+    }
+    .scroll::-webkit-scrollbar{display:none}
+
+    .glass{
+      position:relative;
+      overflow:hidden;
+      background:rgba(255,255,255,.88);
+      border:1px solid rgba(235,242,238,.92);
+      backdrop-filter: blur(12px) saturate(120%);
+      -webkit-backdrop-filter: blur(12px) saturate(120%);
+      box-shadow:
+        0 4px 12px rgba(20,58,40,.06),
+        inset 0 1px 0 rgba(255,255,255,.85);
+    }
+    .glass > *{position:relative;z-index:1}
+
+    .hero{border-radius:24px;padding:20px 18px 18px;margin-bottom:14px;position:relative;overflow:hidden;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 8px 20px rgba(20,58,40,.06)}
+    .hero-kicker{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border-radius:999px;background:var(--brand-soft);color:#000;font-size:10px;font-weight:800;letter-spacing:.10em;text-transform:uppercase;position:relative}
+    .hero-total{font-size:24px;line-height:1.1;font-weight:820;letter-spacing:-.03em;margin:12px 0 8px;position:relative;color:#000}
+    .hero-meta{font-size:13px;line-height:1.45;color:#000;margin:0 0 12px;position:relative;max-width:280px}
+    .hero-meta:empty{display:none}
+    .hero-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;position:relative}
+    .pill-chip{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:rgba(248,252,250,.92);border:1px solid rgba(220,232,226,.86);font-size:12px;font-weight:600;color:#000}
+    .status-block{display:flex;flex-direction:column;gap:10px;position:relative}
+    .run-status{display:none;font-size:12px;color:var(--muted);line-height:1.45}
+    .consent-pill{display:inline-flex;align-items:center;gap:8px;width:fit-content;padding:8px 12px;border-radius:999px;border:1px solid rgba(220,232,226,.86);font-size:11px;font-weight:600}
+    .consent-pill.ok{background:#e7f6ee;color:var(--ok);border-color:#c8e2d4}
+    .consent-pill.warn{background:#fff6e4;color:var(--warn);border-color:#ead6a7}
+    .hero-cta{display:inline-flex;align-items:center;justify-content:center;padding:14px 16px;border-radius:999px;background:linear-gradient(180deg,rgba(138,230,178,.94) 0%, rgba(182,245,210,.95) 40%, rgba(220,252,235,.97) 78%, rgba(244,255,250,.99) 100%);color:#000;font-size:14px;font-weight:800;border:1px solid rgba(67,203,138,.72);box-shadow:0 14px 24px rgba(14,143,91,.14), inset 0 1px 0 rgba(255,255,255,.56), inset 0 -10px 18px rgba(255,255,255,.18);cursor:pointer;backdrop-filter:blur(16px) saturate(128%);-webkit-backdrop-filter:blur(16px) saturate(128%);-webkit-text-stroke:0;text-shadow:none}
+
+    .summary-strip{display:block;margin-bottom:14px}
+    .flow-explain{display:flex;flex-direction:column;align-items:center;justify-content:center;margin:-2px 0 10px;gap:6px}
+    .flow-arrow{display:flex;justify-content:center;align-items:center;color:rgba(26,158,99,.75);font-size:22px;line-height:1}
+    .why-trigger{display:inline-flex;align-items:center;justify-content:center;padding:13px 20px;border-radius:999px;background:linear-gradient(180deg,rgba(226,254,239,.98) 0%, rgba(196,250,221,.95) 22%, rgba(150,236,191,.90) 58%, rgba(100,206,148,.86) 100%);color:#000;font-size:15px;font-weight:800;border:1px solid rgba(67,203,138,.60);box-shadow:0 12px 22px rgba(20,58,40,.08), inset 0 1px 0 rgba(255,255,255,.58), inset 0 -10px 18px rgba(255,255,255,.16);backdrop-filter:blur(16px) saturate(145%);-webkit-backdrop-filter:blur(16px) saturate(145%);cursor:pointer;-webkit-text-stroke:0;text-shadow:none}
+    .summary-tile{padding:16px;border-radius:18px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 3px 10px rgba(20,58,40,.05), inset 0 1px 0 rgba(255,255,255,.60)}
+    .summary-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#000;margin-bottom:6px}
+    .summary-value{font-size:16px;line-height:1.2;font-weight:790;margin-bottom:4px;color:#000}
+    .summary-copy{font-size:11px;line-height:1.35;color:#000}
+    .summary-copy:empty{display:none}
+    .viz-wrap{display:flex;align-items:center;gap:12px;margin-bottom:8px}
+    .donut-chart{width:86px;height:86px;border-radius:50%;position:relative;flex:0 0 auto;background:conic-gradient(#55d894 0 40%, #1a9e63 40% 65%, #9cdab9 65% 100%)}
+    .donut-chart::after{content:"";position:absolute;inset:17px;border-radius:50%;background:#f7fcf9}
+    .viz-legend{display:flex;flex-direction:column;gap:8px;min-width:0;margin-left:14px}
+    .legend-item{display:flex;align-items:center;gap:8px;font-size:15px;color:#000;line-height:1.25;white-space:nowrap}
+    .legend-dot{width:8px;height:8px;border-radius:50%;flex:0 0 8px}
+    .risk-wrap{display:flex;align-items:flex-start;gap:12px}
+
+    .section{margin-bottom:14px}
+    .card{padding:16px;border-radius:18px;background:rgba(255,255,255,.96);border:1px solid rgba(132,186,158,.98);box-shadow:0 3px 10px rgba(20,58,40,.05), inset 0 1px 0 rgba(255,255,255,.88)}
+    .section-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:12px}
+    .section-head.inline-center{align-items:center}
+    .section-head.inline-tight{justify-content:flex-start;gap:8px}
+    #insightsAskAi{height:32px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:10px}
+    .section-title{font-size:18px;font-weight:800;line-height:1.1}
+    .section-sub{font-size:12px;color:var(--muted);line-height:1.45;margin-top:4px}
+
+    .bill-shell{padding:0;background:transparent;border:none;box-shadow:none}
+    .bill-stage{position:relative;min-height:352px;border-radius:22px;overflow:hidden;padding:18px;background:var(--panel-green);border:1px solid var(--panel-line);backdrop-filter:blur(20px) saturate(118%);-webkit-backdrop-filter:blur(20px) saturate(118%);box-shadow:inset 0 1px 0 rgba(255,255,255,.42), inset 0 -1px 0 rgba(57,202,139,.12)}
+    .bill-stage::before{content:"";position:absolute;left:0;right:0;top:0;height:122px;background:rgba(255,255,255,.12);pointer-events:none}
+    .bill-carousel{position:absolute;left:0;right:0;top:18px;bottom:18px;display:block;perspective:1200px}
+    .bill-card{position:absolute;top:0;width:150px;height:206px;border:none;border-radius:24px;padding:16px 12px;text-align:center;cursor:pointer;color:#fff;background:rgba(255,255,255,.96);border:1px solid rgba(108,152,129,.98);box-shadow:0 10px 26px rgba(20,58,40,.10), inset 0 1px 0 rgba(255,255,255,.92);transition:transform .22s cubic-bezier(.22,.85,.28,1), opacity .18s ease, box-shadow .18s ease;overflow:hidden;display:grid;grid-template-rows:auto auto auto;align-content:center;justify-items:center;row-gap:8px;transform-origin:center center;will-change:transform, opacity}
+    .bill-card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg, rgba(255,255,255,.38), rgba(255,255,255,.08) 34%, rgba(255,255,255,0) 70%);pointer-events:none}
+    .bill-card.active{background:linear-gradient(180deg, rgba(226,254,239,.98) 0%, rgba(198,250,221,.96) 26%, rgba(160,241,198,.92) 62%, rgba(92,202,143,.88) 86%, rgba(42,151,97,.90) 100%);border-color:rgba(23,140,82,.96);color:#121212;box-shadow:0 24px 40px rgba(19,120,72,.24), inset 0 1px 0 rgba(255,255,255,.64), inset 0 -14px 22px rgba(255,255,255,.12);backdrop-filter:blur(18px) saturate(135%);-webkit-backdrop-filter:blur(18px) saturate(135%)}
+    .bill-card:not(.active):hover{box-shadow:0 14px 26px rgba(20,58,40,.14), inset 0 1px 0 rgba(255,255,255,.92)}
+    .bill-card-share{font-size:24px;font-weight:900;letter-spacing:0;position:relative;z-index:1;opacity:.98;color:#000;-webkit-text-stroke:0;text-shadow:none;margin:0}
+    .bill-card-name{font-size:15px;line-height:1.25;font-weight:800;word-break:break-word;max-width:100px;margin:0 auto;position:relative;z-index:1;text-align:center;color:#000;order:3;-webkit-text-stroke:0;text-shadow:none}
+    .bill-card-amount{font-size:18px;font-weight:900;letter-spacing:-.02em;position:relative;z-index:1;color:#000;margin:0;order:2;-webkit-text-stroke:0;text-shadow:none}
+    .bill-card.active .bill-card-amount{font-size:22px;font-weight:800}
+
+    .insight-list{display:flex;flex-direction:column;gap:10px}
+    .insight-hero{padding:18px;border-radius:18px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04), inset 0 1px 0 rgba(255,255,255,.72)}
+    .insight-type{display:none}
+    .insight-title{font-size:26px;line-height:1.05;font-weight:840;margin-bottom:8px;color:#000}
+    .insight-copy{font-size:12px;color:#000;line-height:1.35}
+    .insight-rail{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .insight-mini{padding:14px;border-radius:16px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04), inset 0 1px 0 rgba(255,255,255,.60)}
+    .insight-mini-label{font-size:10px;letter-spacing:.10em;text-transform:uppercase;color:#000;margin-bottom:6px}
+    .insight-mini-value{font-size:16px;line-height:1.15;font-weight:820;color:#000}
+
+    .bar-list{display:flex;flex-direction:column;gap:10px}
+    .bar-card{padding:14px;border-radius:12px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04), inset 0 1px 0 rgba(255,255,255,.60)}
+    .bar-head{display:flex;justify-content:space-between;gap:12px;margin-bottom:10px;font-size:13px;font-weight:700;color:#000}
+    .bar-track{height:10px;border-radius:999px;background:#fff;overflow:hidden;border:2px solid rgba(115,176,143,.92)}
+    .bar-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand-2),var(--brand));border:2px solid rgba(46,145,94,.96);box-shadow:0 0 14px rgba(67,203,138,.20)}
+
+    .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .list-item{padding:14px;border-radius:12px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04), inset 0 1px 0 rgba(255,255,255,.60)}
+    .list-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
+    .list-title{font-size:14px;font-weight:790;line-height:1.35}
+    .list-sub{font-size:12px;color:#000;line-height:1.5}
+    .mini-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}
+    .mini-kpi{padding:12px;border-radius:14px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04)}
+    .mini-kpi-label{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+    .mini-kpi-value{font-size:20px;font-weight:800;line-height:1;color:#000}
+    .settlement-flow{display:flex;flex-direction:column;gap:10px}
+    .settlement-row{display:grid;grid-template-columns:1fr auto 1fr auto;align-items:center;gap:10px;padding:14px;border-radius:14px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04)}
+    .settlement-person{font-size:13px;font-weight:700;line-height:1.3}
+    .settlement-arrow{font-size:18px;color:#000;font-weight:800}
+    .settlement-amount{padding:8px 10px;border-radius:999px;background:#e7f6ee;color:var(--ok);font-size:12px;font-weight:800}
+    .net-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .net-card{padding:14px;border-radius:14px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04)}
+    .net-name{font-size:13px;font-weight:700;margin-bottom:10px;color:#000}
+    .net-track{height:10px;border-radius:999px;background:#fff;overflow:hidden;margin-bottom:8px;border:2px solid rgba(115,176,143,.92)}
+    .net-fill{height:100%;border-radius:inherit;border:2px solid rgba(46,145,94,.96)}
+    .net-fill.positive{background:linear-gradient(90deg,#77dfaa,#22b573)}
+    .net-fill.negative{background:linear-gradient(90deg,#ffb0b0,#db6b6b);border-color:rgba(185,86,86,.96)}
+    .net-value{font-size:13px;font-weight:800}
+    .net-value.positive{color:var(--ok)}
+    .net-value.negative{color:var(--danger)}
+    .alert-stack{display:flex;flex-direction:column;gap:10px}
+    .alert-card{padding:14px;border-radius:14px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04)}
+    .alert-card.high{border-color:#ebc0c0;background:#fff7f7}
+    .alert-card.medium{border-color:#ead6a7;background:#fffaf0}
+    .alert-card.low{border-color:#c8e2d4;background:#f7fcf9}
+    .alert-meta{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px}
+    .notif-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+    .notif-card{padding:14px;border-radius:14px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04)}
+    .badge{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;border:1px solid rgba(220,232,226,.86);font-size:11px;font-weight:600;background:rgba(248,252,250,.92);color:#000;white-space:nowrap}
+    .tone-ok{background:#e7f6ee;border-color:#c8e2d4;color:var(--ok)}
+    .tone-warn{background:#fff6e4;border-color:#ead6a7;color:var(--warn)}
+    .tone-danger{background:#fff0f0;border-color:#ebc0c0;color:var(--danger)}
+
+    .empty{padding:16px;border-radius:12px;border:1px dashed rgba(200,216,206,.86);background:rgba(248,252,250,.92);color:#000;font-size:13px;line-height:1.45}
+
+    .pulse{animation:pulse 1.15s ease-in-out infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.58}}
+
+    .tabbar-wrap{
+      position:absolute;left:0;right:0;bottom:0;z-index:4;
+      padding:0 0 calc(var(--safe-bottom));
+      pointer-events:none;
+      background:rgba(255,255,255,.98);
+      border-top:none;
+      border-bottom-left-radius:var(--screen-radius);
+      border-bottom-right-radius:var(--screen-radius);
+      overflow:hidden;
+      clip-path:inset(0 0 0 0 round 0 0 var(--screen-radius) var(--screen-radius));
+    }
+    .tabbar-wrap::before{content:"";position:absolute;left:0;right:0;top:1px;height:1px;background:rgba(176,204,189,.96);z-index:2}
+    .tabbar{
+      position:relative;
+      z-index:1;
+      pointer-events:auto;
+      display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+      padding:14px 0 4px;
+      background:transparent;
+    }
+    .tab{appearance:none;border:none;background:transparent;border-radius:0;padding:10px 0;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;color:var(--muted);font-size:14px;font-weight:700;transition:color .2s ease}
+    .tab.active{color:var(--brand);font-weight:700}
+    .tab.active svg{stroke:var(--brand)}
+    .tab svg{width:24px;height:24px;display:block;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+
+    .home-indicator{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);width:140px;height:5px;border-radius:999px;background:rgba(0,0,0,.72);z-index:5;pointer-events:none}
+    #page-home .scroll{padding-bottom:calc(var(--nav-height) + var(--safe-bottom) + 72px)}
+    #page-home::after{content:"";position:absolute;left:0;right:0;bottom:0;height:132px;background:linear-gradient(180deg, rgba(244,248,245,0) 0%, rgba(244,248,245,.82) 38%, rgba(244,248,245,.98) 72%, rgba(244,248,245,1) 100%);border-bottom-left-radius:var(--screen-radius);border-bottom-right-radius:var(--screen-radius);z-index:3;pointer-events:none}
+
+    .consent-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(16,16,16,.18);backdrop-filter:blur(8px);z-index:50}
+    .consent-modal.show{display:flex}
+    .consent-card{width:min(390px,96vw);padding:22px;border-radius:20px;background:rgba(255,255,255,.98);border:1px solid rgba(235,242,238,.92);box-shadow:0 12px 32px rgba(14,50,33,.12)}
+    .consent-card h3{margin:0 0 10px;font-size:26px;line-height:1.1}
+    .consent-card p{margin:0 0 12px;font-size:14px;color:#567262;line-height:1.55}
+    .consent-check{display:flex;gap:10px;align-items:flex-start;padding:12px;border-radius:16px;background:#f8fcf9;border:1px solid var(--line);margin-bottom:10px;color:var(--text);font-size:13px;line-height:1.45}
+    .consent-actions{display:flex;gap:10px;margin-top:14px}
+    .consent-actions button{flex:1;padding:13px 14px;border-radius:999px;border:1px solid var(--line);font-size:14px;font-weight:800;cursor:pointer}
+    .btn-muted{background:#fff;color:var(--text)}
+    .btn-primary{background:linear-gradient(135deg,var(--brand-2),var(--brand));border:none;color:#fff}
+    .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .consent-note{margin-top:12px;font-size:12px;color:var(--muted)}
+
+    .ai-fab{position:absolute;right:18px;bottom:calc(var(--safe-bottom) + 88px);width:62px;height:62px;border:none;border-radius:50%;cursor:pointer;z-index:12;color:#000;font-size:20px;font-weight:700;background:linear-gradient(180deg,rgba(152,235,187,.95) 0%, rgba(194,247,217,.96) 44%, rgba(225,252,237,.98) 78%, rgba(246,255,250,.99) 100%);border:1px solid rgba(67,203,138,.72);box-shadow:0 12px 24px rgba(14,81,51,.14), inset 0 1px 0 rgba(255,255,255,.58), inset 0 -10px 18px rgba(255,255,255,.18);-webkit-text-stroke:0;text-shadow:none;backdrop-filter:blur(16px) saturate(130%);-webkit-backdrop-filter:blur(16px) saturate(130%)}
+    .ai-chat-shell{position:absolute;right:14px;bottom:calc(var(--safe-bottom) + 160px);width:min(360px, calc(100% - 28px));height:420px;border-radius:16px;overflow:hidden;z-index:13;display:flex;flex-direction:column;background:rgba(255,255,255,.98);border:1px solid rgba(235,242,238,.92);box-shadow:0 12px 32px rgba(18,56,38,.12);transform-origin:bottom right;transform:translateY(12px) scale(.95);opacity:0;pointer-events:none;transition:transform .28s cubic-bezier(.22,.85,.28,1), opacity .22s ease}
+    .ai-chat-shell.open{transform:translateY(0) scale(1);opacity:1;pointer-events:auto}
+    .ai-head{padding:10px 12px;border-bottom:1px solid rgba(180,201,188,.56);display:flex;justify-content:space-between;align-items:center}
+    .ai-title{font-size:14px;font-weight:800;color:#224735}
+    .ai-pill{font-size:10px;padding:4px 7px;border-radius:999px;background:#ecf8f1;color:#2f5f48;border:1px solid #d2e8db;cursor:pointer;appearance:none;-webkit-appearance:none}
+    .ai-msgs{flex:1;overflow:auto;padding:10px;display:flex;flex-direction:column;gap:8px}
+    .ai-msg{max-width:84%;padding:9px 10px;border-radius:11px;font-size:13px;line-height:1.4}
+    .ai-msg.user{margin-left:auto;background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff}
+    .ai-msg.assistant{margin-right:auto;background:#fff;border:1px solid #d6e6dc;color:#214735}
+    .ai-msg.system{margin:auto;background:#fff9ea;border:1px solid #f0d489;color:#705718;font-size:11px}
+    .ai-compose{padding:9px;border-top:1px solid rgba(180,201,188,.56);display:flex;gap:7px}
+    .ai-compose textarea{flex:1;min-height:40px;max-height:110px;resize:vertical;padding:9px 10px;border-radius:9px;border:1px solid rgba(170,192,179,.82);outline:none;background:#fff}
+    .ai-send{border:none;border-radius:9px;padding:9px 10px;background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;font-weight:700;cursor:pointer}
+
+    .ai-settings{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(17,25,20,.20);backdrop-filter:blur(6px);z-index:45}
+    .ai-settings.show{display:flex}
+    .ai-settings-card{width:min(360px,100%);padding:14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(245,251,247,.82));border:1px solid rgba(255,255,255,.9);box-shadow:0 18px 44px rgba(18,56,38,.22)}
+    .ai-settings-card h4{margin:0 0 6px;font-size:16px}
+    .ai-settings-card p{margin:0 0 8px;color:#5b7567;font-size:12px;line-height:1.4}
+    .ai-field{display:flex;flex-direction:column;gap:5px;margin-bottom:8px}
+    .ai-field label{font-size:11px;color:#446654;font-weight:700}
+    .ai-field input{padding:9px 10px;border-radius:9px;border:1px solid rgba(160,186,170,.82);background:#fff}
+    .ai-row{display:flex;gap:7px;justify-content:flex-end;margin-top:8px}
+    .ai-btn{border:none;border-radius:9px;padding:8px 10px;cursor:pointer}
+    .ai-btn.secondary{background:#fff;border:1px solid rgba(160,186,170,.82);color:#2f5c46}
+    .ai-btn.primary{background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff}
+
+    .logo-board{position:fixed;right:max(28px, calc((100vw - 440px) / 2 - 580px));top:50%;transform:translateY(-50%);width:480px;padding:170px 40px;border-radius:10px;background:
+      linear-gradient(180deg, rgba(241,218,191,.99) 0%, rgba(229,201,172,.99) 42%, rgba(212,177,139,.98) 100%),
+      repeating-linear-gradient(7deg, rgba(255,255,255,.10) 0 1px, rgba(162,118,79,.09) 1px 3px, rgba(255,255,255,.03) 3px 7px, rgba(132,91,58,.09) 7px 11px, rgba(255,255,255,.03) 11px 15px),
+      repeating-linear-gradient(96deg, rgba(181,136,95,.12) 0 1px, rgba(255,255,255,0) 1px 10px, rgba(142,100,66,.07) 10px 12px, rgba(255,255,255,0) 12px 20px),
+      linear-gradient(90deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 16%, rgba(120,82,50,.08) 54%, rgba(255,255,255,.05) 100%);
+      border-top:1px solid rgba(250,236,218,.94);border-right:1px solid rgba(145,108,74,.82);border-bottom:1px solid rgba(128,94,60,.84);border-left:none;box-shadow:0 22px 56px rgba(78,49,24,.14), inset 0 1px 0 rgba(255,249,239,.44), inset 0 -16px 28px rgba(114,79,47,.12);position:fixed;overflow:visible;perspective:1600px;z-index:20;pointer-events:none}
+    .logo-board::before{content:"";position:absolute;inset:0;border-radius:10px;background:
+      radial-gradient(120% 60% at 14% 16%, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 42%),
+      repeating-linear-gradient(94deg, rgba(144,100,64,.14) 0 1px, rgba(255,255,255,0) 1px 7px, rgba(181,137,98,.10) 7px 9px, rgba(255,255,255,0) 9px 17px),
+      repeating-linear-gradient(8deg, rgba(161,118,79,.10) 0 1px, rgba(255,255,255,0) 1px 12px);
+      mix-blend-mode:multiply;opacity:.68;pointer-events:none}
+    .logo-spiral{position:absolute;left:8px;top:22px;bottom:22px;width:24px;display:flex;flex-direction:column;justify-content:space-between;z-index:5;pointer-events:none;transition:opacity .18s ease .2s, visibility .18s ease .2s}
+    .logo-spiral::before{display:none}
+    .logo-spiral i{display:block;width:18px;height:26px;border-radius:999px;border:3px solid rgba(142,150,154,.96);border-left:none;background:transparent;box-shadow:inset 0 1px 0 rgba(255,255,255,.42)}
+    .logo-board.page-flip .logo-spiral{opacity:0;visibility:hidden}
+    .logo-board-next{position:absolute;left:-620px;right:22px;top:20px;bottom:20px;border-radius:10px;background:linear-gradient(180deg, rgba(248,242,234,.98) 0%, rgba(236,225,209,.98) 100%);border-top:1px solid rgba(245,238,229,.96);border-right:1px solid rgba(182,158,131,.62);border-bottom:1px solid rgba(166,141,112,.68);border-left:none;box-shadow:0 10px 24px rgba(52,31,15,.10), inset 0 1px 0 rgba(255,255,255,.86);z-index:1;opacity:0;transform:translateX(120px) scaleX(.72);transform-origin:right center;transition:opacity .28s ease .52s, transform 1.15s cubic-bezier(.22,.85,.28,1) .52s;padding:38px 34px 34px 18px;display:grid;grid-template-columns:150px 28px minmax(0,1fr);column-gap:22px;align-items:stretch;text-align:left;overflow:hidden;pointer-events:auto}
+    .logo-board.page-flip .logo-board-next{opacity:1;transform:translateX(0) scaleX(1)}
+    .logo-next-kicker,.logo-next-title,.logo-next-copy{display:none}
+    .logo-next-detail{font-size:24px;line-height:1.5;color:#000;max-width:none;align-self:stretch;margin:0;justify-self:stretch;max-height:none;overflow-y:auto;overflow-x:hidden;padding:4px 8px 4px 0;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+    .logo-next-detail::-webkit-scrollbar{width:6px}
+    .logo-next-detail::-webkit-scrollbar-thumb{background:rgba(70,50,30,.28);border-radius:999px}
+    .logo-next-steps{display:flex;flex-direction:column;gap:18px;align-self:center;justify-self:start}
+    .logo-next-step{appearance:none;border:none;background:transparent;padding:0;text-align:left;cursor:pointer}
+    .logo-next-step-label{display:none}
+    .logo-next-step-value{font-size:28px;line-height:1.05;font-weight:820;color:#000}
+    .logo-next-spine{position:relative;align-self:stretch;justify-self:center;width:28px;pointer-events:none}
+    .logo-next-spine::before{content:"";position:absolute;left:50%;top:2px;bottom:2px;transform:translateX(-50%);width:4px;border-radius:999px;background:linear-gradient(180deg, rgba(145,150,155,.96) 0%, rgba(198,203,207,.96) 48%, rgba(120,126,132,.96) 100%);box-shadow:0 0 0 1px rgba(94,100,106,.20)}
+    .logo-next-spine::after{content:"";position:absolute;left:50%;top:10px;bottom:10px;transform:translateX(-50%);width:20px;background:radial-gradient(circle at center, rgba(173,178,182,.95) 0 5px, rgba(118,124,130,.96) 5px 7px, transparent 7px);background-size:20px 38px;background-repeat:repeat-y;background-position:center top;opacity:.98}
+    .logo-board-face{position:relative;display:flex;align-items:center;justify-content:center;gap:18px;transform-origin:left center;transition:transform 1.05s cubic-bezier(.22,.85,.28,1) .52s;transform-style:preserve-3d;z-index:2;background:transparent;pointer-events:none}
+    .logo-board.page-flip .logo-board-face{transform:rotateY(-165deg) translateX(-24px)}
+    .logo-book{width:172px;height:220px;position:relative;border-radius:8px;flex:0 0 auto;max-width:100%;perspective:1200px;transition:opacity .2s ease .58s;transform:translateX(-92px);transform-style:preserve-3d;filter:drop-shadow(0 18px 18px rgba(78,49,24,.16));pointer-events:none}
+    .logo-book::before{content:"";position:absolute;inset:-8px -8px -8px -10px;border-radius:10px;background:
+      linear-gradient(180deg, rgba(242,220,193,.99) 0%, rgba(229,201,173,.99) 40%, rgba(211,177,140,.98) 100%),
+      repeating-linear-gradient(11deg, rgba(255,255,255,.11) 0 1px, rgba(166,121,82,.10) 1px 3px, rgba(255,255,255,.03) 3px 7px, rgba(130,90,57,.10) 7px 11px, rgba(255,255,255,.03) 11px 15px),
+      repeating-linear-gradient(98deg, rgba(181,136,95,.14) 0 1px, rgba(255,255,255,0) 1px 8px, rgba(142,100,66,.08) 8px 10px, rgba(255,255,255,0) 10px 18px),
+      linear-gradient(90deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,0) 18%, rgba(120,82,50,.10) 56%, rgba(255,255,255,.04) 100%);
+      border:1px solid rgba(145,108,74,.84);box-shadow:0 12px 24px rgba(78,49,24,.12), inset 0 1px 0 rgba(255,248,238,.34), inset 0 -10px 18px rgba(112,76,43,.12);z-index:-1}
+    .logo-book::after{content:"";position:absolute;inset:-8px -8px -8px -10px;border-radius:10px;background:
+      radial-gradient(120% 70% at 18% 14%, rgba(255,255,255,.24) 0%, rgba(255,255,255,0) 36%),
+      repeating-linear-gradient(98deg, rgba(126,84,50,.14) 0 1px, rgba(255,255,255,0) 1px 6px, rgba(164,121,82,.10) 6px 8px, rgba(255,255,255,0) 8px 14px),
+      repeating-linear-gradient(10deg, rgba(170,126,86,.07) 0 1px, rgba(255,255,255,0) 1px 10px);
+      opacity:.68;mix-blend-mode:multiply;pointer-events:none;z-index:-1}
+    .logo-book::after{content:"";position:absolute;inset:-8px -8px -8px -10px;border-radius:10px;background:
+      radial-gradient(120% 70% at 18% 14%, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 36%),
+      repeating-linear-gradient(98deg, rgba(118,78,45,.11) 0 1px, rgba(255,255,255,0) 1px 8px, rgba(155,113,75,.08) 8px 10px, rgba(255,255,255,0) 10px 18px);
+      opacity:.56;mix-blend-mode:multiply;pointer-events:none;z-index:-1}
+    .logo-book.open{opacity:0}
+    .logo-book-spread{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .85s cubic-bezier(.22,.85,.28,1)}
+    .logo-book.open .logo-book-spread{transform:rotateY(-168deg)}
+    .logo-page{position:absolute;inset:0;border-radius:8px;background:
+      linear-gradient(180deg, rgba(250,244,237,.98) 0%, rgba(237,226,211,.98) 100%),
+      repeating-linear-gradient(0deg, rgba(166,137,104,.05) 0 1px, rgba(255,255,255,0) 1px 14px);
+      border:1px solid rgba(188,161,130,.66);box-shadow:0 10px 24px rgba(52,31,15,.10), inset 0 1px 0 rgba(255,255,255,.80);backface-visibility:hidden;overflow:hidden}
+    .logo-page img{width:222px;height:257px;display:block;object-fit:fill;margin:-8px auto 0;background:radial-gradient(circle at 30% 24%, rgba(255,255,255,.14), rgba(255,255,255,0) 38%);border-radius:6px;transform:translateX(-6px)}
+    .logo-page.front{display:flex;align-items:flex-start;justify-content:center;background:
+      linear-gradient(180deg, rgba(242,220,193,.99) 0%, rgba(228,199,171,.99) 42%, rgba(210,176,139,.98) 100%),
+      repeating-linear-gradient(12deg, rgba(255,255,255,.10) 0 1px, rgba(152,108,70,.10) 1px 3px, rgba(255,255,255,.03) 3px 7px, rgba(120,81,49,.10) 7px 11px, rgba(255,255,255,.03) 11px 15px),
+      repeating-linear-gradient(98deg, rgba(181,136,95,.14) 0 1px, rgba(255,255,255,0) 1px 8px, rgba(142,100,66,.08) 8px 10px, rgba(255,255,255,0) 10px 18px),
+      linear-gradient(90deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,0) 20%, rgba(120,82,50,.10) 58%, rgba(255,255,255,.05) 100%);
+      border-color:rgba(145,108,74,.84);box-shadow:0 10px 24px rgba(52,31,15,.10), inset 0 1px 0 rgba(255,247,236,.30), inset 0 -12px 20px rgba(108,72,40,.12)}
+    .logo-page.back{display:flex;align-items:center;justify-content:center;padding:20px;font-size:22px;line-height:1.1;font-weight:800;color:#fff;transform:rotateY(180deg);background:linear-gradient(180deg, rgba(248,241,233,.98) 0%, rgba(233,220,203,.98) 100%);text-shadow:0 2px 6px rgba(78,49,24,.28)}
+    .logo-outline{display:flex;flex-direction:column;gap:18px;position:absolute;right:18px;top:50%;transform:translateY(-50%);z-index:6;transition:opacity .2s ease .58s;filter:drop-shadow(0 6px 10px rgba(78,49,24,.18));pointer-events:auto}
+    .logo-board.page-flip .logo-outline{opacity:0}
+    .logo-word{appearance:none;border:none;padding:0;background:transparent;color:#fff;font-size:24px;line-height:1;font-weight:800;cursor:pointer;text-align:left;text-shadow:0 2px 6px rgba(78,49,24,.28)}
+
+    @media (max-width: 1100px){
+      .logo-board{display:none}
+    }
+
+    @media (max-width: 440px){
+      body{padding:0}
+      .device-shell{width:100vw;height:100vh}
+      .device{width:100vw;height:100vh;transform:none;border-radius:0;padding:0}
+      .device::before,.device::after,.side-btn{display:none}
+      .screen{border-radius:0}
+    }
+  </style>
+</head>
+<body>
+  <div class="browser-side-note">Roles:
+Dhriti: Leading
+Rand: Designer
+Kelly: Researcher and Use case lead
+Riley: Researcher and Innovator
+Bostjan: Solution and AI lead</div>
+  <aside id="logoBoard" class="logo-board">
+    <div class="logo-spiral"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="logo-board-next">
+      <div id="logoNextSteps" class="logo-next-steps"></div>
+      <div class="logo-next-spine" aria-hidden="true"></div>
+      <div id="logoNextDetail" class="logo-next-detail"></div>
+      <div id="logoNextKicker" class="logo-next-kicker">Group Finance</div>
+      <div id="logoNextTitle" class="logo-next-title">See. Judge. Close.</div>
+      <div id="logoNextCopy" class="logo-next-copy">Shared money, closed fairly.</div>
+    </div>
+    <div class="logo-board-face">
+      <div id="logoBook" class="logo-book">
+        <div class="logo-book-spread">
+          <div class="logo-page front"><img src="/static/horse-logo.png" alt="Brand horse mark large preview"></div>
+          <div class="logo-page back">Group<br>Finance</div>
+        </div>
+      </div>
+    </div>
+    <div class="logo-outline">
+      <button class="logo-word" data-outline-page="0">Page 1 - Home</button>
+      <button class="logo-word" data-outline-page="1">Page 2 - Insights</button>
+      <button class="logo-word" data-outline-page="2">Page 3 - Settle</button>
+      <button class="logo-word" data-outline-page="3">Page 4 - Alerts</button>
+      <button class="logo-word" data-outline-page="4">Page 5 - Value</button>
+    </div>
+  </aside>
+  <div class="device-shell">
+  <main class="device">
+    <span class="side-btn left one"></span>
+    <span class="side-btn left two"></span>
+    <span class="side-btn right"></span>
+
+    <div class="screen">
+      <div class="statusbar">
+        <span class="status-time">9:41</span>
+        <div class="status-icons">
+          <div class="status-signal"><i></i><i></i><i></i><i></i></div>
+          <span>5G</span>
+          <span class="status-pill"></span>
+        </div>
+      </div>
+
+      <header class="header">
+        <div class="brand">
+          <img class="brand-logo" src="{{ url_for('static', filename='horse-logo.png') }}" alt="Group Finance logo" />
+          <div class="brand-copy">
+            <h1 class="title">Group<br>Finance</h1>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button id="manageConsentBtn" class="btn secondary" type="button">Privacy</button>
+          <button id="startAnalysis" class="btn primary" type="button">Refresh</button>
+        </div>
+      </header>
+
+      <div class="pages">
+        <section id="page-home" class="page active">
+          <div class="scroll">
+            <section class="section"><div class="bill-shell"><div class="bill-stage"><div id="billDeck" class="bill-carousel"></div></div></div></section>
+
+            <section class="hero glass">
+              <div id="heroKicker" class="hero-kicker">Close this cycle</div>
+              <div id="heroTotal" class="hero-total">Ready</div>
+              <p id="heroMeta" class="hero-meta"></p>
+              <div class="hero-row" style="display:none">
+                <span id="heroStatus" class="pill-chip">🟢 Status · --</span>
+                <span id="consentState" class="consent-pill warn">🔒 Consent required</span>
+              </div>
+              <div class="status-block">
+                <button id="reviewAction" class="hero-cta" type="button">Open next action</button>
+                <div id="runStatus" class="run-status">Syncing latest snapshot…</div>
+              </div>
+            </section>
+
+            <div class="flow-explain"><div class="flow-arrow" aria-hidden="true">↓</div><button id="whyTrigger" class="why-trigger" type="button">Why</button></div>
+
+            <section class="summary-strip">
+              <article class="summary-tile glass">
+                <div class="summary-label"></div>
+                <div id="aiSummary" class="summary-value"></div>
+                <div class="viz-wrap">
+                  <div id="spendDonut" class="donut-chart"></div>
+                  <div id="spendLegend" class="viz-legend"></div>
+                </div>
+                <div id="aiCopy" class="summary-copy"></div>
+              </article>
+            </section>
+          </div>
+        </section>
+
+        <section id="page-insights" class="page">
+          <div class="scroll">
+            <section class="section"><div class="card"><div class="section-head inline-center inline-tight"><div class="section-title">Insights</div></div><div id="insights" class="insight-list"></div></div></section>
+            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Category</div></div></div><div id="cat" class="bar-list"></div></div></section>
+            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Fronted most</div></div></div><div id="paid" class="bar-list"></div></div></section>
+          </div>
+        </section>
+
+        <section id="page-settle" class="page">
+          <div class="scroll">
+            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Settlements</div><div class="section-sub">Payment recommendations as a focused flow.</div></div></div><div id="settlements" class="list"></div></div></section>
+            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Net positions</div><div class="section-sub">Positive means owed back. Negative means needs settlement.</div></div></div><div id="net" class="grid-2"></div></div></section>
+          </div>
+        </section>
+
+        <section id="page-alerts" class="page">
+          <div class="scroll">
+            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Blockers</div></div></div><div id="alerts" class="list"></div></div></section>
+            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Ready to send</div></div></div><div id="notifications" class="list"></div></div></section>
+          </div>
+        </section>
+      </div>
+
+      <div class="tabbar-wrap">
+        <nav class="tabbar">
+          <button class="tab active" data-page="home" type="button" aria-label="Home">
+            <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V20h14V9.5"></path></svg>
+            <span>Home</span>
+          </button>
+          <button class="tab" data-page="insights" type="button" aria-label="Insights">
+            <svg viewBox="0 0 24 24"><path d="M12 3v18"></path><path d="M3 12h18"></path><path d="M5 5l14 14"></path><path d="M19 5 5 19"></path></svg>
+            <span>Insights</span>
+          </button>
+          <button class="tab" data-page="settle" type="button" aria-label="Settle">
+            <svg viewBox="0 0 24 24"><path d="M4 7h13"></path><path d="m13 3 4 4-4 4"></path><path d="M20 17H7"></path><path d="m11 13-4 4 4 4"></path></svg>
+            <span>Settle</span>
+          </button>
+          <button class="tab" data-page="alerts" type="button" aria-label="Alerts">
+            <svg viewBox="0 0 24 24"><path d="M12 5a4 4 0 0 1 4 4v2.6c0 .7.2 1.4.6 2l1 1.4H6.4l1-1.4c.4-.6.6-1.3.6-2V9a4 4 0 0 1 4-4Z"></path><path d="M10 19a2 2 0 0 0 4 0"></path></svg>
+            <span>Alerts</span>
+          </button>
+        </nav>
+      </div>
+      <button id="aiFab" class="ai-fab" type="button" aria-label="Open AI chat" onclick="byId('aiChatShell').classList.toggle('open'); if(byId('aiChatShell').classList.contains('open')) byId('aiInput').focus();">AI</button>
+      <section id="aiChatShell" class="ai-chat-shell" aria-live="polite">
+        <header class="ai-head">
+          <div class="ai-title">AI Chat</div>
+          <button id="aiMode" class="ai-pill" type="button" onclick="byId('aiSettings').classList.add('show');">Set API key</button>
+        </header>
+        <div id="aiMsgs" class="ai-msgs">
+          <div class="ai-msg assistant">Tap AI and set API key first.</div>
+        </div>
+        <div class="ai-compose">
+          <textarea id="aiInput" placeholder="Message AI..."></textarea>
+          <button id="aiSend" class="ai-send" type="button">Send</button>
+        </div>
+      </section>
+
+      <div id="aiSettings" class="ai-settings">
+        <div class="ai-settings-card">
+          <h4>AI Backend Setup</h4>
+          <p>Enter API key once. Chat bubble will use it on this app.</p>
+          <div class="ai-field"><label for="aiApiKey">API Key</label><input id="aiApiKey" type="password" placeholder="sk-..." autocomplete="off" /></div>
+          <div class="ai-field"><label for="aiModelPreset">Model</label><select id="aiModelPreset"><option value="openai-gpt4o-mini">ChatGPT · GPT-4o mini</option><option value="deepseek-chat">DeepSeek · Chat</option><option value="deepseek-reasoner">DeepSeek · Reasoner</option></select></div>
+          <div class="ai-field" style="display:none"><label for="aiModel">Model</label><input id="aiModel" type="text" value="gpt-4o-mini" /></div>
+          <div class="ai-field" style="display:none"><label for="aiBase">API Base</label><input id="aiBase" type="text" value="https://api.openai.com/v1" /></div>
+          <div class="ai-row">
+            <button id="aiCancel" class="ai-btn secondary" type="button">Cancel</button>
+            <button id="aiSave" class="ai-btn primary" type="button" onclick="saveAiSettingsAndConfirm();">Save</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="home-indicator"></div>
+    </div>
+  </main>
+  </div>
+
+  <div id="consentModal" class="consent-modal" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+    <div class="consent-card">
+      <h3 id="consentTitle">Privacy consent required</h3>
+      <p>This prototype processes member names, balances, and transaction data to generate split calculations, settlement suggestions, alerts, and reimbursement recommendations.</p>
+      <p>Legal basis: consent. You may withdraw your consent at any time and provide it again later.</p>
+      <label class="consent-check"><input id="consentUnderstand" type="checkbox" />I understand what data is processed and for what purpose.</label>
+      <label class="consent-check"><input id="consentAgree" type="checkbox" />I agree to the processing of this group finance data for the prototype workflow.</label>
+      <div class="consent-actions">
+        <button id="consentDecline" type="button" class="btn-muted">Cancel for now</button>
+        <button id="consentAccept" type="button" class="btn-primary" disabled>Agree and continue</button>
+      </div>
+      <div class="consent-note">Policy {{ privacy_policy_version }} · Effective {{ privacy_policy_effective_date }}</div>
+    </div>
+  </div>
+
+<script>
+const PRIVACY_POLICY_VERSION = {{ privacy_policy_version|tojson }};
+const REQUIRE_PRIVACY_CONSENT = {{ 'true' if require_privacy_consent else 'false' }};
+const CONSENT_STORAGE_KEY = 'demo2_prototype_ui1_privacy_consent';
+
+const sample = {
+  group:{id:'g1',name:'Flat A'},
+  members:[{id:'u1',name:'Mason',confirmed:true},{id:'u2',name:'Ethan',confirmed:false},{id:'u3',name:'Olivia',confirmed:true}],
+  balances:{u1:120,u2:-15,u3:40},
+  weights:{u1:1,u2:1,u3:1},
+  transactions:[
+    {id:'t1',amount:1200,currency:'GBP',payer_member_id:'u1',category:'rent',date:'2026-02-01',note:'February rent'},
+    {id:'t2',amount:180,currency:'GBP',payer_member_id:'u1',category:'utilities',date:'2026-02-20',note:'Gas and electricity'},
+    {id:'t3',amount:96.5,currency:'GBP',payer_member_id:'u2',category:'groceries',date:'2026-02-21',receipt_text:'Milk - 3.20\nRice - 12.00\nChicken - 8.50'},
+    {id:'t4',amount:29.99,currency:'GBP',payer_member_id:'u1',category:'subscription',date:'2026-02-18',note:'Netflix family'},
+    {id:'t5',amount:64,currency:'GBP',payer_member_id:'u3',category:'utilities',date:'2026-02-24',note:'Broadband'}
+  ]
+};
+
+const byId = (id) => document.getElementById(id);
+const money = (n) => `£${Number(n || 0).toFixed(2)}`;
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const titleCase = (value) => String(value || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+const humanLabel = (v) => ({due_reminder:'Due reminder',low_funds:'Low funds warning',pending_confirmation:'Pending confirmation',advance_imbalance:'Advance imbalance',rotation_hint:'Payer rotation hint',spend_pattern:'Spending pattern',cash_risk:'Cash risk',risk:'Risk signal',fairness:'Fairness recommendation',stability:'Stability update'}[v] || titleCase(v));
+
+function badgeTone(severity){ if(severity === 'high') return 'tone-danger'; if(severity === 'medium') return 'tone-warn'; return 'tone-ok'; }
+function setStage(active){}
+function switchPage(page){ document.querySelectorAll('.page').forEach((el) => el.classList.toggle('active', el.id === `page-${page}`)); document.querySelectorAll('.tab').forEach((el) => el.classList.toggle('active', el.dataset.page === page)); }
+document.querySelectorAll('.tab').forEach((btn) => btn.addEventListener('click', () => switchPage(btn.dataset.page)));
+function emptyState(text){ return `<div class="empty">${text}</div>`; }
+
+function getStoredConsent(){
+  try{ const raw = localStorage.getItem(CONSENT_STORAGE_KEY); if(!raw) return null; const parsed = JSON.parse(raw); if(!parsed || parsed.given !== true) return null; if(parsed.policy_version !== PRIVACY_POLICY_VERSION) return null; if(!parsed.consented_at) return null; return parsed; }catch(_){ return null; }
+}
+function saveConsent(){ const payload = { given:true, policy_version:PRIVACY_POLICY_VERSION, consented_at:new Date().toISOString(), method:'checkbox_ui', actor:'end_user' }; localStorage.setItem(CONSENT_STORAGE_KEY, JSON.stringify(payload)); return payload; }
+function clearConsent(){ localStorage.removeItem(CONSENT_STORAGE_KEY); }
+
+function updateConsentUi(){
+  const consent = getStoredConsent();
+  const state = byId('consentState');
+  const manage = byId('manageConsentBtn');
+  if(REQUIRE_PRIVACY_CONSENT && !consent){ state.textContent = 'Consent required'; state.classList.remove('ok'); state.classList.add('warn'); manage.textContent = 'Privacy'; return; }
+  if(consent){ state.textContent = 'Privacy ready'; state.classList.remove('warn'); state.classList.add('ok'); manage.textContent = 'Withdraw'; return; }
+  state.textContent = 'Privacy optional'; state.classList.remove('warn'); state.classList.add('ok'); manage.textContent = 'Privacy';
+}
+
+function openConsentModal(){ byId('consentModal').classList.add('show'); }
+function closeConsentModal(){ byId('consentModal').classList.remove('show'); byId('consentUnderstand').checked = false; byId('consentAgree').checked = false; byId('consentAccept').disabled = true; }
+function refreshConsentAcceptState(){ byId('consentAccept').disabled = !(byId('consentUnderstand').checked && byId('consentAgree').checked); }
+function requireConsentOrPrompt(){ if(!REQUIRE_PRIVACY_CONSENT) return true; if(getStoredConsent()) return true; openConsentModal(); byId('runStatus').textContent = 'Consent required before processing personal data.'; return false; }
+
+function buildRequestPayload(){ const payload = JSON.parse(JSON.stringify(sample)); if(REQUIRE_PRIVACY_CONSENT){ const consent = getStoredConsent(); if(!consent) return null; payload.consent = consent; } return payload; }
+async function notifyWithdrawal(){ try{ await fetch('/api/demo2/consent/withdraw', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify({actor:'end_user'}) }); }catch(_){} }
+async function withdrawConsent(){ clearConsent(); updateConsentUi(); await notifyWithdrawal(); byId('runStatus').textContent = 'Consent withdrawn. Grant it again before the next recalculation.'; if(REQUIRE_PRIVACY_CONSENT) openConsentModal(); }
+
+function memberNameMap(data){ const map = {}; (data?.dashboard?.net_balance || []).forEach((item) => { map[item.member_id] = item.member_name; }); (data?.dashboard?.who_paid_what || []).forEach((item) => { map[item.member_id] = item.member_name; }); return map; }
+
+let activeBillIndex = 2;
+let billSwipeBound = false;
+let billSwipeState = null;
+let billTrackOffset = -2 * 62;
+let billTrackVelocity = 0;
+let billRaf = null;
+let billSuppressClick = false;
+
+function buildBillEntries(upcoming, transactions){
+  const txMap = new Map((transactions || []).map((tx) => [tx.id, tx]));
+  const iconMap = { rent:'🏠', utilities:'⚡', groceries:'🛒', subscription:'📺', travel:'🚕', entertainment:'🎬', other:'🧾', bill:'🧾' };
+  return (upcoming || []).map((item, index) => {
+    const tx = txMap.get(item.related_transaction_id) || {};
+    const category = item.category || tx.category || 'bill';
+    const sourceName = tx.note || tx.vendor || titleCase(category || `Bill ${index + 1}`);
+    return {
+      key: item.related_transaction_id || `bill-${index}`,
+      category,
+      dueDate: item.due_date || tx.date || '--',
+      name: sourceName,
+      shortName: sourceName.length > 20 ? sourceName.slice(0, 20) + '…' : sourceName,
+      amount: Number(tx.amount || 0),
+      memberCount: 4,
+      icon: iconMap[category] || '🧾'
+    };
+  });
+}
+
+function applyBillDeckLayout(deck, trackOffset = billTrackOffset){
+  const buttons = Array.from(deck.querySelectorAll('[data-bill-index]'));
+  const activeX = deck.clientWidth / 2;
+  const sideGap = 72;
+  const virtualIndex = -trackOffset / sideGap;
+
+  buttons.forEach((button, index) => {
+    const shiftedDelta = index - virtualIndex;
+    const nearest = Math.round(shiftedDelta);
+    const abs = Math.abs(shiftedDelta);
+    const isFocus = abs < 0.5;
+    const direction = shiftedDelta === 0 ? 0 : shiftedDelta > 0 ? 1 : -1;
+    const x = activeX + shiftedDelta * sideGap;
+    const y = 36 + Math.min(abs, 3) * 30;
+    const scale = isFocus ? 1.0 : Math.max(0.8, 0.96 - abs * 0.10);
+    const opacity = isFocus ? 1 : Math.max(0.34, 0.90 - abs * 0.22);
+    const blur = isFocus ? 0 : Math.min(abs * 0.45, 1.2);
+    const rotation = isFocus ? 0 : direction * Math.min(24, 7 + abs * 5.5);
+    const z = 30 - Math.min(Math.abs(nearest), 6);
+
+    button.style.left = `${x}px`;
+    button.style.transform = `translate3d(-50%, ${y}px, 0) rotate(${rotation}deg) scale(${scale})`;
+    button.style.opacity = String(opacity);
+    button.style.filter = blur ? `blur(${blur}px)` : 'none';
+    button.style.zIndex = String(z);
+    button.classList.toggle('active', isFocus);
+  });
+}
+
+function settleBillTrack(deck){
+  const sideGap = 72;
+  const total = deck.querySelectorAll('.bill-card').length;
+  let nextIndex = Math.round(-billTrackOffset / sideGap);
+  nextIndex = Math.max(0, Math.min(nextIndex, total - 1));
+  activeBillIndex = nextIndex;
+  billTrackOffset = -nextIndex * sideGap;
+  applyBillDeckLayout(deck);
+}
+
+function animateBillMomentum(deck){
+  if(billRaf) cancelAnimationFrame(billRaf);
+  const friction = 0.95;
+  const spring = 0.10;
+  const sideGap = 72;
+
+  const tick = () => {
+    billTrackOffset += billTrackVelocity;
+    billTrackVelocity *= friction;
+
+    const total = deck.querySelectorAll('.bill-card').length;
+    const minOffset = -(total - 1) * sideGap;
+    const maxOffset = 0;
+    if(billTrackOffset < minOffset){
+      billTrackOffset = minOffset;
+      billTrackVelocity *= 0.4;
+    }
+    if(billTrackOffset > maxOffset){
+      billTrackOffset = maxOffset;
+      billTrackVelocity *= 0.4;
+    }
+
+    let snapIndex = Math.round(-billTrackOffset / sideGap);
+    snapIndex = Math.max(0, Math.min(snapIndex, total - 1));
+    const snapTarget = -snapIndex * sideGap;
+    if(Math.abs(billTrackVelocity) < 0.45){
+      billTrackOffset += (snapTarget - billTrackOffset) * spring;
+    }
+
+    applyBillDeckLayout(deck);
+
+    if(Math.abs(billTrackVelocity) < 0.12 && Math.abs(snapTarget - billTrackOffset) < 0.8){
+      billRaf = null;
+      settleBillTrack(deck);
+      return;
+    }
+
+    billRaf = requestAnimationFrame(tick);
+  };
+
+  billRaf = requestAnimationFrame(tick);
+}
+
+function bindBillDeckSwipe(deck, upcoming, transactions){
+  if(billSwipeBound) return;
+  billSwipeBound = true;
+
+  const start = (clientX, target, pointerId) => {
+    if(billRaf) cancelAnimationFrame(billRaf);
+    billRaf = null;
+    billSuppressClick = false;
+    const hitCard = target?.closest?.('[data-bill-index]');
+    if(hitCard) hitCard.setPointerCapture?.(pointerId);
+    billSwipeState = { startX: clientX, lastX: clientX, lastT: performance.now(), deltaX: 0, dragging: true };
+  };
+  const move = (clientX) => {
+    if(!billSwipeState?.dragging) return;
+    const now = performance.now();
+    const dx = clientX - billSwipeState.lastX;
+    const dt = Math.max(1, now - billSwipeState.lastT);
+    billTrackOffset += dx;
+    billTrackVelocity = dx / dt * 16;
+    billSwipeState.deltaX = clientX - billSwipeState.startX;
+    if(Math.abs(billSwipeState.deltaX) > 4) billSuppressClick = true;
+    billSwipeState.lastX = clientX;
+    billSwipeState.lastT = now;
+    applyBillDeckLayout(deck);
+  };
+  const end = () => {
+    if(!billSwipeState) return;
+    const moved = Math.abs(billSwipeState.deltaX || 0) > 3;
+    billSwipeState = null;
+    if(!moved){
+      settleBillTrack(deck);
+      return;
+    }
+    animateBillMomentum(deck);
+  };
+
+  deck.addEventListener('pointerdown', (e) => start(e.clientX, e.target, e.pointerId));
+  deck.addEventListener('pointermove', (e) => move(e.clientX));
+  deck.addEventListener('pointerup', end);
+  deck.addEventListener('pointercancel', end);
+}
+
+function renderBillDeck(upcoming, transactions){
+  const deck = byId('billDeck');
+  const entries = buildBillEntries(upcoming, transactions);
+
+  if(!entries.length){
+    deck.innerHTML = '';
+    return;
+  }
+
+  if(activeBillIndex >= entries.length) activeBillIndex = 0;
+  const totalAmount = Math.max(0.01, entries.reduce((sum, entry) => sum + Number(entry.amount || 0), 0));
+
+  deck.innerHTML = entries.map((entry, index) => {
+    const isActive = index === activeBillIndex;
+    const pct = Math.round((Number(entry.amount || 0) / totalAmount) * 100);
+    return `
+      <button class="bill-card ${isActive ? 'active' : ''}" data-bill-index="${index}">
+        <div class="bill-card-share">${pct}%</div>
+        <div class="bill-card-amount">${money(entry.amount)}</div>
+        <div class="bill-card-name">${entry.shortName}</div>
+      </button>`;
+  }).join('');
+
+  applyBillDeckLayout(deck);
+
+  const buttons = Array.from(deck.querySelectorAll('[data-bill-index]'));
+  buttons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if(billSwipeState || billSuppressClick){
+        billSuppressClick = false;
+        return;
+      }
+      const next = Number(button.dataset.billIndex || 0);
+      if(Number.isFinite(next)){
+        activeBillIndex = next;
+        billTrackOffset = -next * 62;
+      }
+      renderBillDeck(upcoming, transactions);
+    });
+  });
+
+  bindBillDeckSwipe(deck, upcoming, transactions);
+}
+
+function renderSettlements(settlements, names){ const root = byId('settlements'); if(!settlements || !settlements.length){ root.innerHTML = emptyState('No settlement transfer needed for this cycle.'); return; } const shown = settlements.slice(0,4); const total = shown.reduce((sum, item) => sum + Number(item.amount || 0), 0); const members = new Set(shown.flatMap((item) => [item.from_member_id, item.to_member_id])).size; root.innerHTML = `<div class="mini-kpis"><div class="mini-kpi"><div class="mini-kpi-label">Transfers</div><div class="mini-kpi-value">${shown.length}</div></div><div class="mini-kpi"><div class="mini-kpi-label">Members</div><div class="mini-kpi-value">${members}</div></div><div class="mini-kpi"><div class="mini-kpi-label">Total</div><div class="mini-kpi-value">${money(total)}</div></div></div><div class="settlement-flow">${shown.map((item) => { const fromName = names[item.from_member_id] || item.from_member_id; const toName = names[item.to_member_id] || item.to_member_id; return `<article class="settlement-row"><div class="settlement-person">${fromName}</div><div class="settlement-arrow">→</div><div class="settlement-person">${toName}</div><div class="settlement-amount">${money(item.amount)}</div></article>`; }).join('')}</div>`; }
+function renderAlerts(alerts){ const root = byId('alerts'); if(!alerts || !alerts.length){ root.innerHTML = emptyState('No blockers right now.'); return; }
+  const sorted = [...alerts].sort((a, b) => ({high:3, medium:2, low:1}[b.severity || 'low'] - ({high:3, medium:2, low:1}[a.severity || 'low'])));
+  const top = sorted[0];
+  const next = sorted.slice(1,3);
+  const topTitle = ['pending_confirmation','advance_imbalance','low_funds'].includes(top.type) ? 'Balance not yet restored' : top.message;
+  root.innerHTML = `
+    <article class="alert-card ${top.severity || 'low'}">
+      <div class="alert-meta"><span class="badge ${badgeTone(top.severity)}">${titleCase(top.severity || 'medium')}</span></div>
+      <div class="list-title">${topTitle}</div>
+      <div class="list-sub">${humanLabel(top.type || 'blocker')}</div>
+    </article>
+    ${next.length ? `<div class="notif-grid">${next.map((item) => `<article class="notif-card"><div class="list-title">${humanLabel(item.type || 'signal')}</div><div class="list-sub">${item.message}</div></article>`).join('')}</div>` : ''}`; }
+function renderNotifications(notifications){ const root = byId('notifications'); if(!notifications || !notifications.length){ root.innerHTML = emptyState('No messages queued.'); return; }
+  root.innerHTML = `<div class="notif-grid">${notifications.slice(0,2).map((item) => `<article class="notif-card"><div class="list-title">${humanLabel(item.title)}</div><div class="list-sub">${item.message}</div></article>`).join('')}</div>`; }
+function renderInsights(insights){ const root = byId('insights'); if(!insights || !insights.length){ root.innerHTML = emptyState('No insights yet. Run a recalculation first.'); return; }
+  const primary = insights[0] || {};
+  const second = insights[1] || {};
+  const third = insights[2] || {};
+  const short = (text, fallback='') => ((text || fallback).split(/[.。]/).map(part => part.trim()).filter(Boolean)[0] || fallback || '');
+  const tighten = (text, fallback='') => {
+    const value = short(text, fallback).replace(/^Use\s+/i, '').replace(/^Review\s+/i, '').replace(/^Request\s+/i, 'Ask ').replace(/^Apply\s+/i, '').trim();
+    return value.length > 26 ? `${value.slice(0, 26).trim()}…` : value;
+  };
+  root.innerHTML = `
+    <article class="insight-hero">
+      <div class="insight-title">${tighten(primary.title, 'Cycle focus')}</div>
+      <div class="insight-copy">${tighten(primary.action || primary.message, 'Review this cycle')}</div>
+    </article>
+    <div class="insight-rail">
+      <article class="insight-mini">
+        <div class="insight-mini-label">Shift</div>
+        <div class="insight-mini-value">${tighten(second.title || second.message, 'No major shift')}</div>
+      </article>
+      <article class="insight-mini">
+        <div class="insight-mini-label">Next</div>
+        <button id="insightsAskAi" class="btn secondary" type="button" onclick="openAiChat(); byId('aiInput').value = 'Explain the most important insight and what action should happen next.'; aiSend();">Ask AI</button>
+      </article>
+    </div>`; }
+function renderBars(id, items, nameKey, valueKey){ const root = byId(id); if(!items || !items.length){ root.innerHTML = emptyState('No data available.'); return; } const max = Math.max(1, ...items.map((item) => Number(item[valueKey] || 0))); root.innerHTML = items.map((item) => { const value = Number(item[valueKey] || 0); const width = Math.max(4, Math.round((value / max) * 100)); return `<article class="bar-card"><div class="bar-head"><span>${item[nameKey]}</span><strong>${money(value)}</strong></div><div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div></article>`; }).join(''); }
+function renderNet(net){ const root = byId('net'); if(!net || !net.length){ root.innerHTML = emptyState('No balances yet.'); return; } const max = Math.max(1, ...net.map((item) => Math.abs(Number(item.net || 0)))); root.innerHTML = `<div class="net-grid">${net.map((item) => { const value = Number(item.net || 0); const width = Math.max(8, Math.round((Math.abs(value) / max) * 100)); const positive = value >= 0; return `<article class="net-card"><div class="net-name">${item.member_name}</div><div class="net-track"><div class="net-fill ${positive ? 'positive' : 'negative'}" style="width:${width}%"></div></div><div class="net-value ${positive ? 'positive' : 'negative'}">${positive ? '+' : ''}${money(value)}</div></article>`; }).join('')}</div>`; }
+
+function renderHomeVisuals(data, alerts){
+  const donut = byId('spendDonut');
+  const legend = byId('spendLegend');
+  const riskRing = byId('riskRing');
+  const riskScore = byId('riskScore');
+  const cats = (data?.dashboard?.chart_data?.by_category || []).slice().sort((a,b) => Number(b.total||0)-Number(a.total||0));
+  const total = Math.max(0.01, cats.reduce((sum, c) => sum + Number(c.total || 0), 0));
+  const top = cats.slice(0,3);
+  const colors = ['#55d894', '#1a9e63', '#94d8b5', '#d3e9dc'];
+
+  if(donut){
+    if(!top.length){
+      donut.style.background = 'conic-gradient(#cfe4d8 0 100%)';
+    } else {
+      let acc = 0;
+      const parts = top.map((c, i) => {
+        const pct = Math.max(3, (Number(c.total||0) / total) * 100);
+        const start = acc;
+        acc = Math.min(100, acc + pct);
+        return `${colors[i]} ${start.toFixed(1)}% ${acc.toFixed(1)}%`;
+      });
+      if(acc < 100) parts.push(`${colors[3]} ${acc.toFixed(1)}% 100%`);
+      donut.style.background = `conic-gradient(${parts.join(',')})`;
+    }
+  }
+
+  if(legend){
+    if(!top.length){
+      legend.innerHTML = '<div class="legend-item"><span class="legend-dot" style="background:#cfe4d8"></span>No spend data</div>';
+    } else {
+      legend.innerHTML = top.map((c, i) => {
+        const pct = Math.round((Number(c.total||0) / total) * 100);
+        return `<div class="legend-item"><span class="legend-dot" style="background:${colors[i]}"></span>${titleCase(c.category)} ${pct}%</div>`;
+      }).join('');
+    }
+  }
+
+  const high = (alerts || []).filter((a) => a.severity === 'high').length;
+  const med = (alerts || []).filter((a) => a.severity === 'medium').length;
+  const low = (alerts || []).filter((a) => a.severity === 'low').length;
+  const score = Math.min(100, high * 45 + med * 22 + low * 10);
+  const color = score >= 70 ? '#d96565' : score >= 40 ? '#d3a33d' : '#32b978';
+
+  if(riskRing) riskRing.style.background = `conic-gradient(${color} 0 ${score}%, rgba(255,255,255,.30) ${score}% 100%)`;
+  if(riskScore) riskScore.textContent = String(score);
+}
+
+function updateFocus(data, names, settlements){
+  const fairness = (data.fairness || [])[0];
+  const insight = (data.insights || [])[0];
+  const settlement = settlements[0];
+  const alerts = data.alerts || [];
+  const highAlert = alerts.find((item) => item.severity === 'high') || alerts[0];
+  if(settlement){
+    const fromName = names[settlement.from_member_id] || settlement.from_member_id;
+    const toName = names[settlement.to_member_id] || settlement.to_member_id;
+    byId('heroKicker').textContent = 'Close this cycle';
+    byId('heroTotal').textContent = `${fromName} pays ${toName} ${money(settlement.amount)}`;
+    byId('heroMeta').textContent = '';
+    byId('reviewAction').textContent = 'Go to settlement';
+  } else if (fairness){
+    const nextPayer = names[fairness.recommendation?.next_payer_member_id] || fairness.recommendation?.next_payer_member_id || 'the next member';
+    byId('heroKicker').textContent = 'Keep it fair';
+    byId('heroTotal').textContent = `Ask ${nextPayer} to pay next`;
+    byId('heroMeta').textContent = 'Reduce imbalance.';
+    byId('reviewAction').textContent = 'Review fairness';
+  } else if (insight){
+    byId('heroKicker').textContent = 'Best next action';
+    byId('heroTotal').textContent = insight.title;
+    byId('heroMeta').textContent = insight.message;
+    byId('reviewAction').textContent = 'Review insight';
+  } else {
+    byId('heroKicker').textContent = 'Cycle status';
+    byId('heroTotal').textContent = 'Stable';
+    byId('heroMeta').textContent = 'No blocker.';
+    byId('reviewAction').textContent = 'Review cycle';
+  }
+
+  if(highAlert){
+    byId('attentionSummary').textContent = '';
+    byId('attentionCopy').textContent = '';
+  } else {
+    byId('attentionSummary').textContent = '';
+    byId('attentionCopy').textContent = '';
+  }
+
+  if(insight){
+    byId('aiSummary').textContent = '';
+    byId('aiCopy').textContent = insight.title;
+  } else if (fairness){
+    byId('aiSummary').textContent = '';
+    byId('aiCopy').textContent = fairness.evidence || 'Rotation suggested.';
+  } else {
+    byId('aiSummary').textContent = '';
+    byId('aiCopy').textContent = 'Best next move';
+  }
+}
+
+
+async function runPipeline(){
+  if(!requireConsentOrPrompt()) return;
+  const payload = buildRequestPayload();
+  if(!payload){ byId('runStatus').textContent = 'Consent payload missing. Please grant consent first.'; openConsentModal(); return; }
+  switchPage('home');
+  setStage(1); byId('runStatus').classList.add('pulse'); byId('runStatus').textContent = 'Refreshing the latest group cycle…'; await wait(220);
+  setStage(2); byId('runStatus').textContent = 'AI is grouping shared expenses and rebuilding the split…'; await wait(220);
+  setStage(3); byId('runStatus').textContent = 'Preparing the shortest settlement path and risk checks…'; await wait(220);
+  setStage(4); byId('runStatus').textContent = 'Publishing the clearest next step for the group…';
+
+  const res = await fetch('/api/demo2', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+  const data = await res.json().catch(() => ({ok:false,error:'invalid_response'}));
+  if(!res.ok || !data.ok){ byId('runStatus').classList.remove('pulse'); byId('runStatus').textContent = `Update failed${data?.error ? ` · ${data.error}` : ''}`; if(String(data?.error || '').startsWith('privacy_consent')){ clearConsent(); updateConsentUi(); openConsentModal(); } return; }
+
+  const names = memberNameMap(data);
+  const split = (data.split_suggestions || [])[0] || {settlements:[], total:0};
+  const settlements = split.settlements || [];
+  const alerts = data.alerts || [];
+  const upcoming = data.dashboard?.upcoming_bills || [];
+  const members = data.dashboard?.who_paid_what || [];
+  const refreshedAt = data.refresh?.refreshed_at ? new Date(data.refresh.refreshed_at) : new Date();
+
+  renderBillDeck(upcoming, payload.transactions || []); renderSettlements(settlements, names); renderAlerts(alerts); renderNotifications(data.notifications || []); renderInsights(data.insights || []); renderBars('cat', data.dashboard?.chart_data?.by_category || [], 'category', 'total'); renderBars('paid', data.dashboard?.chart_data?.by_member_paid || [], 'member_name', 'total'); renderNet(data.dashboard?.net_balance || []); renderHomeVisuals(data, alerts); updateFocus(data, names, settlements);
+
+  byId('runStatus').classList.remove('pulse');
+  byId('runStatus').textContent = `Updated ${refreshedAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} · ${members.length} members · ${(data.detected_shared_bills || []).length} shared bills analysed`;
+  updateConsentUi();
+}
+
+const AI_SETTINGS_KEY = 'demo2_ai_chat_settings_v1';
+const AI_CHAT_KEY = 'demo2_ai_chat_history_v1';
+let aiHistory = [];
+
+function aiApplyPreset(preset){
+  const map = {
+    'openai-gpt4o-mini': { model: 'gpt-4o-mini', apiBase: 'https://api.openai.com/v1' },
+    'deepseek-chat': { model: 'deepseek-chat', apiBase: 'https://api.deepseek.com/v1' },
+    'deepseek-reasoner': { model: 'deepseek-reasoner', apiBase: 'https://api.deepseek.com/v1' },
+  };
+  const picked = map[preset] || map['openai-gpt4o-mini'];
+  byId('aiModel').value = picked.model;
+  byId('aiBase').value = picked.apiBase;
+}
+function aiLoadSettings(){
+  try{
+    const raw = localStorage.getItem(AI_SETTINGS_KEY);
+    const cfg = raw ? JSON.parse(raw) : {};
+    byId('aiApiKey').value = cfg.apiKey || '';
+    byId('aiModelPreset').value = cfg.modelPreset || 'openai-gpt4o-mini';
+    aiApplyPreset(byId('aiModelPreset').value);
+    byId('aiMode').textContent = cfg.apiKey ? 'Ready' : 'Set API key';
+  }catch(_){
+    byId('aiModelPreset').value = 'openai-gpt4o-mini';
+    aiApplyPreset('openai-gpt4o-mini');
+    byId('aiMode').textContent = 'Set API key';
+  }
+}
+function aiGetSettings(){
+  try{
+    return JSON.parse(localStorage.getItem(AI_SETTINGS_KEY) || '{}');
+  }catch(_){
+    return {};
+  }
+}
+function aiSaveSettings(){
+  const preset = String(byId('aiModelPreset').value || 'openai-gpt4o-mini').trim() || 'openai-gpt4o-mini';
+  aiApplyPreset(preset);
+  const cfg = {
+    apiKey: String(byId('aiApiKey').value || '').trim(),
+    modelPreset: preset,
+    model: String(byId('aiModel').value || 'gpt-4o-mini').trim() || 'gpt-4o-mini',
+    apiBase: String(byId('aiBase').value || 'https://api.openai.com/v1').trim() || 'https://api.openai.com/v1',
+  };
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify(cfg));
+  byId('aiMode').textContent = cfg.apiKey ? 'Ready' : 'Set API key';
+  return cfg;
+}
+function aiPush(role, text){
+  const root = byId('aiMsgs');
+  const div = document.createElement('div');
+  div.className = `ai-msg ${role}`;
+  div.textContent = text;
+  root.appendChild(div);
+  root.scrollTop = root.scrollHeight;
+}
+function aiRender(){
+  const root = byId('aiMsgs');
+  root.innerHTML = '';
+  if(!aiHistory.length){
+    aiPush('assistant', 'Tap AI and set API key first.');
+    return;
+  }
+  aiHistory.forEach((m) => aiPush(m.role === 'assistant' ? 'assistant' : 'user', m.content));
+}
+function aiLoadHistory(){
+  try{
+    aiHistory = JSON.parse(localStorage.getItem(AI_CHAT_KEY) || '[]');
+    if(!Array.isArray(aiHistory)) aiHistory = [];
+  }catch(_){ aiHistory = []; }
+  aiRender();
+}
+function aiSaveHistory(){
+  localStorage.setItem(AI_CHAT_KEY, JSON.stringify(aiHistory.slice(-40)));
+}
+function aiClearHistory(){
+  aiHistory = [];
+  localStorage.removeItem(AI_CHAT_KEY);
+  aiRender();
+}
+function aiCollectUiContext(){
+  const activeTab = document.querySelector('.tab.active')?.dataset?.page || 'home';
+  const heroTitle = byId('heroTotal')?.textContent?.trim() || '';
+  const heroMeta = byId('heroMeta')?.textContent?.trim() || '';
+  const heroDue = byId('heroDue')?.textContent?.trim() || '';
+  const heroStatus = byId('heroStatus')?.textContent?.trim() || '';
+  const aiSummary = byId('aiSummary')?.textContent?.trim() || '';
+  const attentionSummary = byId('attentionSummary')?.textContent?.trim() || '';
+
+  const activeBill = document.querySelector('#billDeck .bill-card.active');
+  const activeBillName = activeBill?.querySelector('.bill-card-name')?.textContent?.trim() || '';
+  const activeBillAmount = activeBill?.querySelector('.bill-card-amount')?.textContent?.trim() || '';
+
+  const activePage = document.querySelector('.page.active');
+  const visibleSectionTitles = Array.from(activePage?.querySelectorAll('.section-title') || []).map((el) => el.textContent?.trim()).filter(Boolean);
+  const visibleSectionTexts = Array.from(activePage?.querySelectorAll('.section .section-title, .section .summary-value, .section .list-title, .section .list-sub, .section .mini-kpi-label, .section .mini-kpi-value, .section .bar-head span, .section .net-name') || [])
+    .map((el) => el.textContent?.trim())
+    .filter(Boolean)
+    .slice(0, 40);
+  const lastSection = Array.from(activePage?.querySelectorAll('.section') || []).slice(-1)[0];
+  const bottomSectionTitle = lastSection?.querySelector('.section-title')?.textContent?.trim() || '';
+  const bottomSectionText = Array.from(lastSection?.querySelectorAll('.section-title, .list-title, .list-sub, .mini-kpi-label, .mini-kpi-value, .bar-head span, .net-name') || [])
+    .map((el) => el.textContent?.trim())
+    .filter(Boolean)
+    .slice(0, 12)
+    .join(' | ');
+
+  const settlementsCount = document.querySelectorAll('#settlements .settlement-row').length;
+  const alertsCount = document.querySelectorAll('#alerts .alert-card, #alerts .notif-card').length;
+  const insightsCount = document.querySelectorAll('#insights .insight-hero, #insights .insight-mini').length;
+
+  return {
+    activeTab,
+    heroTitle,
+    heroMeta,
+    heroDue,
+    heroStatus,
+    aiSummary,
+    attentionSummary,
+    activeBillName,
+    activeBillAmount,
+    settlementsCount,
+    alertsCount,
+    insightsCount,
+    visibleSectionTitles,
+    visibleSectionTexts,
+    bottomSectionTitle,
+    bottomSectionText,
+    timestamp: new Date().toISOString()
+  };
+}
+async function aiSend(){
+  const text = String(byId('aiInput').value || '').trim();
+  if(!text) return;
+  const cfg = aiGetSettings();
+  if(!cfg.apiKey){
+    aiPush('system', 'Set API key first.');
+    byId('aiSettings').classList.add('show');
+    return;
+  }
+  byId('aiInput').value = '';
+  aiHistory.push({ role:'user', content:text });
+  aiSaveHistory();
+  aiRender();
+  aiPush('system', 'Thinking...');
+  try{
+    const uiContext = aiCollectUiContext();
+    const scopedMessages = aiHistory.map((m) => ({ role:m.role, content:m.content }));
+
+    const res = await fetch('/api/assistant-chat', {
+      method:'POST',
+      headers:{'content-type':'application/json'},
+      body: JSON.stringify({
+        apiKey: cfg.apiKey,
+        modelPreset: cfg.modelPreset,
+        model: cfg.model,
+        apiBase: cfg.apiBase,
+        messages: scopedMessages,
+        uiContext
+      })
+    });
+    const data = await res.json().catch(() => ({}));
+    byId('aiMsgs').lastChild?.remove();
+    if(!res.ok || !data.ok){
+      const providerMsg = data?.detail?.error?.message || data?.detail?.message || '';
+      aiPush('system', `Error: ${data.error || 'request failed'}${providerMsg ? ` · ${providerMsg}` : ''}`);
+      return;
+    }
+    aiHistory.push({ role:'assistant', content: String(data.reply || '').trim() || '(empty reply)' });
+    aiSaveHistory();
+    aiRender();
+  }catch(err){
+    byId('aiMsgs').lastChild?.remove();
+    aiPush('system', `Error: ${String(err)}`);
+  }
+}
+
+function openAiChat(){
+  byId('aiChatShell').classList.add('open');
+  byId('aiInput').focus();
+}
+byId('aiFab').onclick = () => {
+  byId('aiChatShell').classList.toggle('open');
+  if(byId('aiChatShell').classList.contains('open')) byId('aiInput').focus();
+};
+byId('aiSend').onclick = aiSend;
+byId('aiInput').addEventListener('keydown', (e) => {
+  if(e.key === 'Enter' && !e.shiftKey){
+    e.preventDefault();
+    aiSend();
+  }
+});
+byId('aiMode').onclick = () => byId('aiSettings').classList.add('show');
+byId('aiModelPreset').addEventListener('change', (e) => aiApplyPreset(e.target.value));
+byId('aiFab').addEventListener('dblclick', () => byId('aiSettings').classList.add('show'));
+byId('whyTrigger').onclick = () => {
+  openAiChat();
+  byId('aiInput').value = 'Why is this the first action?';
+  aiSend();
+};
+const logoPages = [
+  {
+    kicker:'Page 1 - Home',
+    detail:`This first page needs to establish the real premise of the project clearly: this is not an app for pure AA splitting. If a group already agrees that every cost should be divided equally and everyone pays immediately, then there is almost nothing left to design. People can calculate the amount on the spot, transfer it, and move on. In that scenario, our product is unnecessary. The project only becomes meaningful when payment and fairness are separated in time. Someone fronts the money, others reimburse later, and the group has to live for a while with an imbalance that is technically temporary but socially very real.\n\nThat is why the homepage should not feel like a generic finance dashboard. It has to frame the product as a tool for restoring balance after shared spending has already happened. The overview, the cycle summary, and the prompts for action all need to support that idea. We are not designing for a neat instant transaction; we are designing for delayed fairness. This matters because the discomfort in group finance rarely comes from arithmetic alone. It comes from waiting, reminding, forgetting, assuming, and quietly keeping score. A person who fronts payment is not just paying early. They are taking on uncertainty, cash-flow pressure, and sometimes the emotional burden of asking to be paid back.\n\nThe first page therefore has an important rhetorical role. It tells users that the system is not there to replace common sense with automation, but to make a messy social process more visible. The page also needs to avoid a major trap: making the situation look cleaner than it really is. If the interface is too smooth, it can falsely imply that fairness has already been solved. In truth, the system is only helping the group manage a period of temporary imbalance more deliberately. That is a more modest claim, but also a more honest one.\n\nSo page one should be read as a statement of scope. We are not optimising equal splitting in the abstract. We are designing around shared payments, delayed reimbursement, and the need to recover trust and balance over time.`
+  },
+  {
+    kicker:'Page 2 - Insights',
+    detail:`The second page should explain why transaction structure matters once we move beyond instant AA. When people share costs over time, the key issue is no longer just what was spent, but how that spending was carried. Who advanced the payment? Who has not reimbursed yet? Which expenses were genuinely shared, and which only looked shared from the outside? That is why this page cannot just be a receipt viewer. It has to make visible the difference between a purchase, a contribution, and a debt that is still unresolved.\n\nThis is also where the project starts becoming more interesting than a calculator. The same total can produce very different social situations depending on timing and responsibility. A perfectly equal split on paper can still feel uneven if one person has repeatedly fronted the money for everyone else. So the design of this page needs to show patterns rather than isolated numbers. The system is not only reading amounts; it is trying to surface how the burden of fronting payments is distributed across the group. That is the real design problem.\n\nAt the same time, we need to stay critical about how much interpretation belongs in the interface. Once the system starts classifying transactions and framing them as more or less fair, it gains rhetorical power. What the app highlights begins to shape what the group treats as important. That means the design cannot pretend to be neutral. A page like this is already arguing for a certain understanding of shared responsibility. The question is whether it does so transparently enough that people can disagree with it.\n\nSo page two should not promise objectivity it cannot deliver. Its job is to structure the evidence of imbalance, not to declare a final truth. In our project, that distinction matters. The app should help users recognise why reimbursement is needed, but it should not hide the fact that all such recognition is partly interpretive. This makes the page more credible, not less.`
+  },
+  {
+    kicker:'Page 3 - Settle',
+    detail:`Page three is where AI can become useful, but only if we are strict about what usefulness means. In this project, AI should not be positioned as a machine that decides what is fair in a moral sense. That would be both overconfident and conceptually weak. What AI can do well is identify patterns, summarise situations, and propose a plausible next step when the group is dealing with delayed reimbursement and repeated fronting. Its role is not to replace judgement, but to reduce ambiguity.\n\nThat distinction matters because once payment is deferred, group finance becomes harder to track mentally. People forget who covered what, mix up shared and personal costs, and often rely on vague impressions of who has already "done enough." AI can help by pulling those fragments into a readable structure. It can show that a certain person has repeatedly advanced money, that a category of spending has shifted, or that a reimbursement path is becoming unnecessarily complicated. In that sense, AI supports recall, pattern recognition, and prioritisation. Those are meaningful contributions.\n\nBut this is also the page where the product could easily overreach. A recommendation can sound more authoritative than it really is, especially when generated through a polished interface. We should be careful not to let explanation collapse into legitimacy. Just because the system can produce a neat rationale does not mean the rationale is complete. It may still miss agreements made offline, differences in income, or emotional labour that never appears in transaction data. If the project ignores that limitation, then the AI layer becomes decorative intelligence rather than responsible design.\n\nSo page three should communicate a careful position: AI is valuable here because the problem is not simple enough for memory alone, but not objective enough for automation alone. The best version of this feature offers structured judgement without pretending to own the truth.`
+  },
+  {
+    kicker:'Page 4 - Alerts',
+    detail:`The fourth page should make settlement legible as a future action, not a record of something that has already happened. This is important because the whole project depends on the gap between spending and repayment. Once someone fronts the money, the group enters an unsettled state. Settlement is the process of closing that state. The transfers shown here are therefore not decorative outputs; they are proposed actions for restoring balance. They answer the question of how the group can move from temporary imbalance back to a stable position with the least confusion.\n\nThis page is also where the project becomes most concrete. Earlier pages can analyse, contextualise, and interpret, but eventually the interface has to say what should happen next. That is the real test. If the app cannot guide people toward an intelligible repayment path, then it remains an interesting diagnostic tool without practical consequence. In our case, the value of settlement is not that it produces a mathematically elegant endpoint. Its value is that it gives the group a manageable way to end a period of informal debt.\n\nStill, this page should not romanticise closure. In real groups, recommended transfers are often the point where social friction becomes visible. People delay, negotiate, avoid, or quietly resent the suggestion. So the design here should be firm enough to support action, but modest enough to admit that action may still be contested. A settlement recommendation is not the same thing as agreement. It is a proposal for how fairness might be restored, given the information available.\n\nThat makes page four central to the whole product logic. If page one defines the problem as delayed fairness, then page four is where delayed fairness is operationalised. The design needs to show not only who owes what, but why settling now matters for the health of the group relationship.`
+  },
+  {
+    kicker:'Page 5 - Value',
+    detail:`The final page should be the most openly critical one. If this product works, what exactly is it improving? The easiest answer would be convenience, but that is too weak. A calculator is already convenient. The stronger claim is that the app gives groups a more stable way to live with temporary imbalance and to recover fairness without relying entirely on memory, politeness, or personal spreadsheets. It creates a shared frame for reimbursement. That frame can reduce anxiety for the person who fronted the money and reduce vagueness for the people who still need to pay them back.\n\nBut the value is not unconditional. A tool like this can also intensify accounting behaviour, formalise friendships in uncomfortable ways, or make every shared cost feel like a micro-contract. There is a real risk that in trying to support fairness, the product could encourage over-measurement. That is why the project should not present itself as universally desirable. It is most useful in groups where reimbursement is frequent enough to create strain, but not so formalised that existing systems already handle it.\n\nSo the benefit of the app is not that it makes sharing possible. People already share. The benefit is that it gives structure to the period after one person has carried the cost and before fairness has been restored. That is a narrow but meaningful space. The more honestly we define that space, the stronger the project becomes. Instead of pretending to solve all group finance, the product can confidently claim something more precise: it helps groups manage the social and financial consequences of fronted shared payments.`
+  },
+];
+function setLogoPage(index){
+  const page = logoPages[index] || logoPages[0];
+  byId('logoNextKicker').textContent = '';
+  byId('logoNextTitle').textContent = '';
+  byId('logoNextCopy').textContent = '';
+  byId('logoNextDetail').textContent = page.detail || '';
+  byId('logoNextDetail').scrollTop = 0;
+  byId('logoNextSteps').innerHTML = `<button class="logo-next-step"><div class="logo-next-step-value">${page.kicker}</div></button>`;
+}
+let logoFlipTimer = null;
+function resetLogoBook(){
+  const book = byId('logoBook');
+  const board = byId('logoBoard');
+  if(logoFlipTimer) clearTimeout(logoFlipTimer);
+  board.classList.remove('page-flip');
+  book.classList.remove('open');
+  setLogoPage(0);
+}
+document.querySelectorAll('.logo-word').forEach((btn) => btn.addEventListener('click', (event) => {
+  event.stopPropagation();
+  const pageIndex = Number(btn.dataset.outlinePage || 0);
+  setLogoPage(pageIndex);
+  const book = byId('logoBook');
+  const board = byId('logoBoard');
+  book.classList.add('open');
+  if(logoFlipTimer) clearTimeout(logoFlipTimer);
+  logoFlipTimer = setTimeout(() => board.classList.add('page-flip'), 520);
+}));
+document.addEventListener('click', (event) => {
+  const board = byId('logoBoard');
+  if(!board.classList.contains('page-flip')) return;
+  if(event.target.closest('#logoBoard')) return;
+  resetLogoBook();
+});
+setLogoPage(0);
+function closeAiSettings(){ byId('aiSettings').classList.remove('show'); }
+function saveAiSettingsAndConfirm(){
+  const cfg = aiSaveSettings();
+  closeAiSettings();
+  aiPush('system', cfg.apiKey ? 'API settings saved. AI is ready.' : 'AI settings updated.');
+  byId('runStatus').textContent = cfg.apiKey ? 'AI is ready.' : byId('runStatus').textContent;
+}
+byId('aiCancel').onclick = closeAiSettings;
+byId('aiSave').onclick = saveAiSettingsAndConfirm;
+byId('aiApiKey').addEventListener('keydown', (e) => { if(e.key === 'Enter'){ e.preventDefault(); saveAiSettingsAndConfirm(); } });
+
+byId('consentUnderstand').onchange = refreshConsentAcceptState;
+byId('consentAgree').onchange = refreshConsentAcceptState;
+byId('consentDecline').onclick = () => { closeConsentModal(); byId('runStatus').textContent = 'Consent not granted. Prototype analysis is paused.'; };
+byId('consentAccept').onclick = () => { saveConsent(); closeConsentModal(); updateConsentUi(); runPipeline(); };
+byId('manageConsentBtn').onclick = () => { if(getStoredConsent()){ withdrawConsent(); return; } openConsentModal(); };
+byId('startAnalysis').onclick = () => { aiClearHistory(); runPipeline(); };
+
+function boot(){ updateConsentUi(); switchPage('home'); setStage(1); renderBillDeck([], []); renderSettlements([], {}); renderAlerts([]); renderNotifications([]); renderInsights([]); renderBars('cat', [], 'category', 'total'); renderBars('paid', [], 'member_name', 'total'); renderNet([]); renderHomeVisuals({}, []); aiLoadSettings(); aiLoadHistory(); byId('reviewAction').addEventListener('click', () => switchPage('settle')); if(REQUIRE_PRIVACY_CONSENT && !getStoredConsent()){ openConsentModal(); byId('runStatus').textContent = 'Consent required before the first run.'; return; } runPipeline(); }
+boot();
+</script>
+</body>
+</html>
