@@ -301,6 +301,13 @@
     #page-home .scroll{padding-bottom:calc(var(--nav-height) + var(--safe-bottom) + 72px)}
     #page-home::after{content:"";position:absolute;left:0;right:0;bottom:0;height:132px;background:linear-gradient(180deg, rgba(244,248,245,0) 0%, rgba(244,248,245,.82) 38%, rgba(244,248,245,.98) 72%, rgba(244,248,245,1) 100%);border-bottom-left-radius:var(--screen-radius);border-bottom-right-radius:var(--screen-radius);z-index:3;pointer-events:none}
 
+    @media (max-width: 480px){
+      body{padding:8px;overflow:auto;place-items:start center;background:var(--desk)}
+      .device-shell{width:100%;height:auto;min-height:100dvh;padding-top:8px}
+      .device{transform:scale(min(calc((100vw - 16px) / var(--device-width)), calc((100dvh - 16px) / var(--device-height)), .84));margin-bottom:-56px}
+      .browser-side-note{display:none}
+    }
+
     .consent-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(16,16,16,.18);backdrop-filter:blur(8px);z-index:50}
     .consent-modal.show{display:flex}
     .consent-card{width:min(390px,96vw);padding:22px;border-radius:20px;background:rgba(255,255,255,.98);border:1px solid rgba(235,242,238,.92);box-shadow:0 12px 32px rgba(14,50,33,.12)}
