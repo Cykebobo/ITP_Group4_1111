@@ -1,0 +1,60 @@
+<svg width="320" height="320" viewBox="0 0 320 320" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Real horse logo study</title>
+  <desc id="desc">A more detailed green horse illustration for logo exploration outside the phone UI.</desc>
+  <defs>
+    <linearGradient id="bg" x1="44" y1="34" x2="274" y2="286" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7FFF9"/>
+      <stop offset="0.48" stop-color="#E6F8ED"/>
+      <stop offset="1" stop-color="#CDEFD9"/>
+    </linearGradient>
+    <linearGradient id="body" x1="112" y1="58" x2="232" y2="252" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#26CB77"/>
+      <stop offset="0.55" stop-color="#14995E"/>
+      <stop offset="1" stop-color="#0A6F43"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="148" y1="80" x2="240" y2="242" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0F402B"/>
+      <stop offset="1" stop-color="#072117"/>
+    </linearGradient>
+    <linearGradient id="mane" x1="182" y1="66" x2="232" y2="134" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B2419"/>
+      <stop offset="1" stop-color="#144F35"/>
+    </linearGradient>
+    <filter id="shadow" x="20" y="20" width="280" height="280" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#0C2F20" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="32" y="32" width="256" height="256" rx="72" fill="url(#bg)"/>
+    <rect x="33" y="33" width="254" height="254" rx="71" stroke="#E5F7EC" stroke-width="2"/>
+  </g>
+
+  <path d="M132 111C146 93 163 77 181 69C190 66 200 66 211 70C224 75 235 86 240 99C243 108 241 115 235 122C231 126 228 132 228 139C228 148 232 156 238 164C249 178 253 194 247 210C242 223 232 232 216 238C204 243 191 245 178 244C168 243 158 241 149 237C141 233 135 226 131 217C126 207 124 194 124 179C124 168 120 159 111 153C103 148 96 140 92 130C88 120 89 111 96 104C104 97 116 99 132 111Z" fill="url(#body)"/>
+
+  <path d="M186 72C199 64 211 63 222 69C235 76 244 88 248 102C250 110 249 119 245 128C241 136 239 143 240 149C241 157 247 164 257 172C267 180 272 191 271 204C270 218 263 230 251 239C238 249 222 254 202 254C191 254 181 253 171 249C191 247 208 241 220 231C232 221 238 209 238 195C238 180 233 168 222 159C214 152 209 144 208 134C207 123 211 112 220 102C226 95 228 88 225 81C223 75 216 72 206 72H186Z" fill="url(#dark)"/>
+
+  <path d="M158 117C166 108 173 100 178 92C184 82 187 74 187 67C192 66 198 67 204 70C212 73 217 78 220 85C223 91 222 98 216 104C211 109 204 112 196 115C187 118 179 123 173 130L158 117Z" fill="url(#body)"/>
+  <path d="M187 67C197 66 206 69 213 76C219 82 221 89 220 98C219 107 214 114 205 118C197 122 189 123 182 121C190 114 196 107 199 100C202 94 202 87 199 81C197 76 193 71 187 67Z" fill="url(#dark)"/>
+
+  <path d="M211 73C224 78 234 87 241 102C230 95 220 90 210 87C211 82 211 78 211 73Z" fill="url(#mane)"/>
+  <path d="M213 85C226 93 235 103 239 116C228 109 218 104 209 102C211 97 212 91 213 85Z" fill="url(#mane)"/>
+  <path d="M208 101C220 110 227 121 229 134C219 126 211 121 202 118C205 112 207 107 208 101Z" fill="url(#mane)"/>
+
+  <path d="M128 170C124 195 118 221 110 248" stroke="#092519" stroke-width="12" stroke-linecap="round"/>
+  <path d="M154 176C154 201 156 226 161 252" stroke="#092519" stroke-width="12" stroke-linecap="round"/>
+  <path d="M205 171C220 151 234 129 246 105" stroke="#092519" stroke-width="12" stroke-linecap="round"/>
+  <path d="M218 184C232 202 246 219 260 234" stroke="#092519" stroke-width="12" stroke-linecap="round"/>
+
+  <path d="M118 143C111 136 104 130 98 126" stroke="#0A281B" stroke-width="9" stroke-linecap="round"/>
+  <path d="M120 219C115 233 108 244 98 252" stroke="#0A281B" stroke-width="9" stroke-linecap="round"/>
+  <path d="M164 250C166 258 171 266 178 271" stroke="#0A281B" stroke-width="9" stroke-linecap="round"/>
+  <path d="M260 233C266 239 270 247 272 257" stroke="#0A281B" stroke-width="9" stroke-linecap="round"/>
+
+  <path d="M177 136C188 137 199 142 208 150" stroke="#C9F6DB" stroke-width="6" stroke-linecap="round"/>
+  <path d="M166 159C181 159 196 155 209 147" stroke="#98E7BC" stroke-width="6" stroke-linecap="round"/>
+  <path d="M160 186C176 187 191 184 205 176" stroke="#7ADDA7" stroke-width="5" stroke-linecap="round"/>
+
+  <circle cx="206" cy="89" r="4.8" fill="#F7FFF9"/>
+  <path d="M220 95C226 96 232 101 236 110" stroke="#082317" stroke-width="5" stroke-linecap="round"/>
+</svg>
