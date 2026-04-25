@@ -478,7 +478,7 @@ Bostjan: Solution and AI lead</div>
 
       <header class="header">
         <div class="brand">
-          <img class="brand-logo" src="{{ url_for('static', filename='horse-logo.png') }}" alt="Group Finance logo" />
+          <img class="brand-logo" src="{{ url_for('static', filename='horse-logo.png') }}" alt="Group Finance logo" id="brandLogo" style="cursor:pointer" title="Double-click to open Database" />
           <div class="brand-copy">
             <h1 class="title">Group<br>Finance</h1>
           </div>
@@ -1314,6 +1314,9 @@ byId('consentDecline').onclick = () => { closeConsentModal(); byId('runStatus').
 byId('consentAccept').onclick = () => { saveConsent(); closeConsentModal(); updateConsentUi(); runPipeline(); };
 byId('manageConsentBtn').onclick = () => { if(getStoredConsent()){ withdrawConsent(); return; } openConsentModal(); };
 byId('startAnalysis').onclick = () => { aiClearHistory(); runPipeline(); };
+
+// ── Double-click logo → open database manager ────────────────────────────────
+byId('brandLogo').addEventListener('dblclick', () => { window.open('/db', '_blank'); });
 
 function boot(){ updateConsentUi(); switchPage('home'); setStage(1); renderBillDeck([], []); renderSettlements([], {}); renderAlerts([]); renderNotifications([]); renderInsights([]); renderBars('cat', [], 'category', 'total'); renderBars('paid', [], 'member_name', 'total'); renderNet([]); renderHomeVisuals({}, []); aiLoadSettings(); aiLoadHistory(); byId('reviewAction').addEventListener('click', () => switchPage('settle')); if(REQUIRE_PRIVACY_CONSENT && !getStoredConsent()){ openConsentModal(); byId('runStatus').textContent = 'Consent required before the first run.'; return; } runPipeline(); }
 boot();

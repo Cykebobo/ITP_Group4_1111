@@ -1,0 +1,1109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>GFM Database</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    :root {
+      --sidebar-bg: #1c2333;
+      --sidebar-w: 210px;
+      --accent: #e8750a;
+      --accent-hover: #d06a08;
+      --blue: #3b82f6;
+      --green: #16a34a;
+      --red: #dc2626;
+      --yellow: #ca8a04;
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --border: #e2e6ea;
+      --border-dark: #d0d5dd;
+      --text: #1a1d23;
+      --muted: #6b7280;
+      --mono: 'JetBrains Mono', ui-monospace, monospace;
+      --sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+      --row-even: #f9fafb;
+      --row-hover: #eef2ff;
+      --header-h: 80px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { zoom: 1.75; }
+    html, body { height: 100%; font-family: var(--sans); font-size: 22px; color: var(--text); background: var(--bg); }
+
+    /* ── layout ── */
+    .layout { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── sidebar ── */
+    .sidebar {
+      width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .sidebar-logo {
+      padding: 20px 18px 16px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-logo-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #fff;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sidebar-logo-icon img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .sidebar-logo-text { font-size: 13px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .sidebar-logo-sub { font-size: 10px; color: rgba(255,255,255,.45); font-weight: 400; }
+
+    .sidebar-section { padding: 12px 0 4px; }
+    .sidebar-label {
+      padding: 0 18px 8px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.35);
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 18px;
+      cursor: pointer;
+      border-radius: 0;
+      color: rgba(255,255,255,.6);
+      font-size: 12px;
+      font-weight: 500;
+      transition: background .12s, color .12s;
+      user-select: none;
+      border-left: 3px solid transparent;
+    }
+    .sidebar-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .sidebar-item.active { background: rgba(232,117,10,.15); color: #fff; border-left-color: var(--accent); }
+    .sidebar-item-icon { font-size: 13px; width: 16px; text-align: center; opacity: .7; }
+    .sidebar-item-count {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 11px;
+      background: rgba(255,255,255,.1);
+      color: rgba(255,255,255,.5);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+
+    .sidebar-bottom {
+      margin-top: auto;
+      padding: 16px 18px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .conn-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,.4);
+    }
+    .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #374151; flex-shrink: 0; }
+    .conn-dot.ok { background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,.5); }
+    .conn-dot.err { background: #ef4444; }
+
+    /* ── main ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; zoom: 0.65; }
+
+    /* ── toolbar ── */
+    .toolbar {
+      height: var(--header-h);
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 28px;
+      flex-shrink: 0;
+    }
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      color: var(--muted);
+    }
+    .breadcrumb-sep { color: #d1d5db; }
+    .breadcrumb strong { color: var(--text); font-weight: 600; }
+    .toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+
+    /* ── tabs (group switcher) ── */
+    .tabs-bar {
+      height: 48px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      padding: 0 28px;
+      gap: 0;
+      flex-shrink: 0;
+      overflow-x: auto;
+    }
+    .tabs-bar:empty { display: none; }
+    .tab-item {
+      padding: 10px 22px 11px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color .15s;
+      user-select: none;
+    }
+    .tab-item:hover { color: var(--text); }
+    .tab-item.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+    /* ── table header bar ── */
+    .table-bar {
+      padding: 14px 28px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .table-bar-title { font-size: 15px; font-weight: 700; color: var(--text); }
+    .table-bar-sub { font-size: 13px; color: var(--muted); margin-left: 6px; }
+    .table-bar-right { margin-left: auto; display: flex; gap: 8px; }
+
+    /* ── content area ── */
+    .content { flex: 1; overflow: auto; }
+
+    /* ── data table ── */
+    .data-table-wrap { overflow-x: auto; }
+    table.data-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    table.data-table th {
+      background: #f3f4f6;
+      padding: 11px 18px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border-dark);
+      white-space: nowrap;
+      user-select: none;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    table.data-table th.sortable { cursor: pointer; }
+    table.data-table th.sortable:hover { background: #eaecef; color: var(--text); }
+    table.data-table td {
+      padding: 12px 18px;
+      border-bottom: 1px solid #f0f1f3;
+      vertical-align: middle;
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+    table.data-table tr:nth-child(even) td { background: var(--row-even); }
+    table.data-table tr:hover td { background: var(--row-hover); }
+    table.data-table tr.selected td { background: #eff6ff; }
+    .null-cell { color: #9ca3af; font-style: italic; font-size: 13px; }
+    .mono { font-family: var(--mono); font-size: 13px; }
+    .row-num { color: #9ca3af; font-family: var(--mono); font-size: 12px; padding-right: 4px; text-align: right; user-select: none; width: 48px; }
+    table.data-table .action-col { width: 100px; text-align: right; }
+
+    .empty-state {
+      padding: 48px 24px;
+      text-align: center;
+      color: var(--muted);
+    }
+    .empty-state-icon { font-size: 32px; margin-bottom: 12px; opacity: .4; }
+    .empty-state-title { font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .empty-state-sub { font-size: 12px; line-height: 1.6; }
+
+    /* ── status bar ── */
+    .statusbar {
+      height: 34px;
+      background: #f1f3f5;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 28px;
+      gap: 24px;
+      font-size: 13px;
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .statusbar-item { display: flex; align-items: center; gap: 5px; }
+
+    /* ── buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--sans);
+      border: 1px solid var(--border-dark);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .12s, border-color .12s;
+    }
+    .btn:hover { background: #f3f4f6; }
+    .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+    .btn-sm { padding: 6px 13px; font-size: 13px; }
+    .btn-ghost { border-color: transparent; background: transparent; color: var(--muted); }
+    .btn-ghost:hover { background: #f3f4f6; color: var(--text); border-color: var(--border); }
+    .btn-danger-ghost { border-color: transparent; background: transparent; color: #9ca3af; }
+    .btn-danger-ghost:hover { background: #fef2f2; color: var(--red); border-color: #fecaca; }
+    .btn-app { background: var(--sidebar-bg); color: rgba(255,255,255,.85); border-color: transparent; }
+    .btn-app:hover { background: #252f42; color: #fff; }
+
+    /* ── badges ── */
+    .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; font-family: var(--mono); }
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-red { background: #fee2e2; color: #b91c1c; }
+    .badge-yellow { background: #fef9c3; color: #854d0e; }
+    .badge-blue { background: #dbeafe; color: #1d4ed8; }
+    .badge-grey { background: #f3f4f6; color: #6b7280; }
+    .badge-orange { background: #ffedd5; color: #c2410c; }
+
+    /* ── modals ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,20,30,.5);
+      backdrop-filter: blur(3px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 12px;
+      width: min(520px, 100%);
+      box-shadow: 0 24px 60px rgba(0,0,0,.18), 0 0 0 1px rgba(0,0,0,.08);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 18px 22px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-title { font-size: 17px; font-weight: 700; }
+    .modal-close { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; padding: 2px 8px; border-radius: 4px; }
+    .modal-close:hover { background: #f3f4f6; color: var(--text); }
+    .modal-body { padding: 24px 26px; }
+    .modal-footer { padding: 16px 26px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; background: #fafafa; }
+
+    /* ── form ── */
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group:last-child { margin-bottom: 0; }
+    .form-label { display: block; font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .04em; }
+    .form-label .req { color: var(--accent); }
+    .form-control {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1px solid var(--border-dark);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: var(--sans);
+      color: var(--text);
+      background: #fff;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,117,10,.1); }
+    .form-control.mono-input { font-family: var(--mono); font-size: 13px; }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+    .form-hint { margin-top: 5px; font-size: 12px; color: var(--muted); }
+
+    /* ── divider ── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* ── toast ── */
+    .toast-wrap { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 100; }
+    .toast {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #fff;
+      background: #1c2333;
+      box-shadow: 0 4px 20px rgba(0,0,0,.2);
+      border: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity .2s, transform .2s;
+      pointer-events: none;
+      max-width: 320px;
+    }
+    .toast.show { opacity: 1; transform: none; }
+    .toast.error { background: #7f1d1d; }
+    .toast-icon { font-size: 14px; }
+
+    /* ── loading ── */
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(0,0,0,.1); border-top-color: var(--accent); border-radius: 50%; animation: spin .55s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── seed confirm ── */
+    .warning-box { background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px 14px; font-size: 12.5px; color: #92400e; line-height: 1.6; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">
+        <img src="/static/horse-logo.png" alt="Group Finance logo"/>
+      </div>
+      <div>
+        <div class="sidebar-logo-text">Group Finance</div>
+        <div class="sidebar-logo-sub">Database Manager</div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Database</div>
+      <div class="sidebar-item" onclick="showView('groups')" id="nav-groups">
+        <span class="sidebar-item-icon">▤</span>
+        gfm_groups
+        <span class="sidebar-item-count" id="cnt-groups">—</span>
+      </div>
+      <div class="sidebar-item" onclick="showView('members')" id="nav-members">
+        <span class="sidebar-item-icon">▤</span>
+        gfm_members
+        <span class="sidebar-item-count" id="cnt-members">—</span>
+      </div>
+      <div class="sidebar-item" onclick="showView('transactions')" id="nav-transactions">
+        <span class="sidebar-item-icon">▤</span>
+        gfm_transactions
+        <span class="sidebar-item-count" id="cnt-transactions">—</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Actions</div>
+      <div class="sidebar-item" onclick="openSeedModal()">
+        <span class="sidebar-item-icon">↓</span>
+        Seed Sample Data
+      </div>
+      <div class="sidebar-item" onclick="location.href='/'">
+        <span class="sidebar-item-icon">↗</span>
+        Back to App
+      </div>
+    </div>
+
+    <div class="sidebar-bottom">
+      <div class="conn-status">
+        <div class="conn-dot" id="connDot"></div>
+        <span id="connText">Connecting…</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="breadcrumb">
+        <span>gfm</span>
+        <span class="breadcrumb-sep">/</span>
+        <strong id="breadcrumbTable">groups</strong>
+      </div>
+      <div class="toolbar-right">
+        <button class="btn btn-sm btn-ghost" onclick="refreshAll()">↺ Refresh</button>
+        <button class="btn btn-sm btn-primary" id="insertBtn" onclick="openInsertModal()">+ Insert Row</button>
+      </div>
+    </div>
+
+    <!-- Group filter tabs (shown for members/transactions) -->
+    <div class="tabs-bar" id="groupTabs"></div>
+
+    <!-- Table action bar -->
+    <div class="table-bar">
+      <span class="table-bar-title" id="tableBarTitle">gfm_groups</span>
+      <span class="table-bar-sub" id="tableBarSub"></span>
+      <div class="table-bar-right">
+        <span id="selectionInfo" style="font-size:11.5px;color:var(--muted);display:none"></span>
+      </div>
+    </div>
+
+    <!-- Data area -->
+    <div class="content" id="contentArea">
+      <div class="empty-state">
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- Status bar -->
+    <div class="statusbar">
+      <span class="statusbar-item" id="sbRows">— rows</span>
+      <span class="statusbar-item" id="sbDb">DB: gfm</span>
+      <span class="statusbar-item" id="sbTime"></span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── Modals ── -->
+
+<!-- Create Group -->
+<div class="modal-overlay" id="modalGroup">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Insert Row — gfm_groups</span>
+      <button class="modal-close" onclick="closeModal('modalGroup')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">id <span class="req">*</span></label>
+          <input id="gId" class="form-control mono-input" placeholder="e.g. g2 (auto if empty)"/>
+          <div class="form-hint">VARCHAR(64) PRIMARY KEY</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">name <span class="req">*</span></label>
+          <input id="gName" class="form-control" placeholder="e.g. Flat B"/>
+          <div class="form-hint">VARCHAR(200) NOT NULL</div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalGroup')">Cancel</button>
+      <button class="btn btn-primary" onclick="createGroup()">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Member -->
+<div class="modal-overlay" id="modalMember">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Insert Row — gfm_members</span>
+      <button class="modal-close" onclick="closeModal('modalMember')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">id</label>
+          <input id="mId" class="form-control mono-input" placeholder="auto-generated"/>
+          <div class="form-hint">VARCHAR(64) PRIMARY KEY</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">name <span class="req">*</span></label>
+          <input id="mName" class="form-control" placeholder="e.g. Alice"/>
+          <div class="form-hint">VARCHAR(200) NOT NULL</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">balance</label>
+          <input id="mBalance" class="form-control mono-input" type="number" step="0.01" value="0"/>
+          <div class="form-hint">DECIMAL(12,2) DEFAULT 0.00</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">weight</label>
+          <input id="mWeight" class="form-control mono-input" type="number" step="0.1" value="1" min="0"/>
+          <div class="form-hint">DECIMAL(8,4) DEFAULT 1.0000</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">confirmed</label>
+        <select id="mConfirmed" class="form-control">
+          <option value="true">1 (true)</option>
+          <option value="false">0 (false)</option>
+        </select>
+        <div class="form-hint">TINYINT(1) NOT NULL</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalMember')">Cancel</button>
+      <button class="btn btn-primary" onclick="addMember()">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Transaction -->
+<div class="modal-overlay" id="modalTx">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Insert Row — gfm_transactions</span>
+      <button class="modal-close" onclick="closeModal('modalTx')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">payer_member_id <span class="req">*</span></label>
+          <select id="tPayer" class="form-control mono-input"></select>
+          <div class="form-hint">VARCHAR(64) FK → gfm_members</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">amount <span class="req">*</span></label>
+          <input id="tAmount" class="form-control mono-input" type="number" step="0.01" placeholder="0.00"/>
+          <div class="form-hint">DECIMAL(12,2) NOT NULL</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">category</label>
+          <select id="tCategory" class="form-control">
+            <option value="">NULL (auto-detect)</option>
+            <option value="rent">rent</option>
+            <option value="utilities">utilities</option>
+            <option value="groceries">groceries</option>
+            <option value="subscription">subscription</option>
+            <option value="entertainment">entertainment</option>
+            <option value="travel">travel</option>
+            <option value="other">other</option>
+          </select>
+          <div class="form-hint">VARCHAR(50)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">date <span class="req">*</span></label>
+          <input id="tDate" class="form-control mono-input" type="date"/>
+          <div class="form-hint">DATE NOT NULL</div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">note</label>
+        <input id="tNote" class="form-control" placeholder="e.g. February rent"/>
+        <div class="form-hint">TEXT (nullable)</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">receipt_text</label>
+        <textarea id="tReceipt" class="form-control mono-input" placeholder="Milk - 3.20&#10;Rice - 12.00"></textarea>
+        <div class="form-hint">TEXT (nullable) — one item per line: Name - Amount</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalTx')">Cancel</button>
+      <button class="btn btn-primary" onclick="addTransaction()">Insert</button>
+    </div>
+  </div>
+</div>
+
+<!-- Seed modal -->
+<div class="modal-overlay" id="modalSeed">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Seed Sample Data</span>
+      <button class="modal-close" onclick="closeModal('modalSeed')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warning-box">
+        ⚠ This will INSERT sample rows into all three tables. Existing rows with the same primary key will be skipped (INSERT IGNORE).
+      </div>
+      <table class="data-table" style="font-size:12px;border:1px solid var(--border);border-radius:6px;overflow:hidden">
+        <thead><tr><th>Table</th><th>Rows to insert</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">gfm_groups</td><td>1 — Flat A (g1)</td></tr>
+          <tr><td class="mono">gfm_members</td><td>3 — Mason, Ethan, Olivia</td></tr>
+          <tr><td class="mono">gfm_transactions</td><td>5 — rent, utilities ×2, groceries, subscription</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalSeed')">Cancel</button>
+      <button class="btn btn-primary" onclick="seedData()">Execute</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm -->
+<div class="modal-overlay" id="modalDelete">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Confirm Delete</span>
+      <button class="modal-close" onclick="closeModal('modalDelete')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="warning-box" id="deleteMsg">Are you sure?</div>
+      <p style="font-size:12.5px;color:var(--muted)">This action cannot be undone.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('modalDelete')">Cancel</button>
+      <button class="btn btn-sm" style="background:#dc2626;color:#fff;border-color:#dc2626" id="confirmDeleteBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+// ── State ───────────────────────────────────────────────────────────────────
+let _view = 'groups';
+let _groups = [];
+let _members = [];
+let _transactions = [];
+let _selectedGid = null;
+let _deleteCallback = null;
+let _dbEnabled = false;
+
+// ── Utilities ────────────────────────────────────────────────────────────────
+const $id = id => document.getElementById(id);
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+function enc(s) { return encodeURIComponent(s); }
+
+function fmtDate(s) {
+  if (!s) return '<span class="null-cell">NULL</span>';
+  try { return new Date(s).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }); }
+  catch { return s; }
+}
+function fmtDatetime(s) {
+  if (!s) return '<span class="null-cell">NULL</span>';
+  try { return new Date(s).toLocaleString('en-GB', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
+  catch { return s; }
+}
+function fmtMoney(v) {
+  const n = Number(v ?? 0);
+  const cls = n < 0 ? 'badge-red' : n > 0 ? 'badge-green' : 'badge-grey';
+  return `<span class="badge ${cls}">£${n.toFixed(2)}</span>`;
+}
+function nullOrVal(v) {
+  return (v === null || v === undefined || v === '') ? '<span class="null-cell">NULL</span>' : esc(v);
+}
+
+function toast(msg, ok = true) {
+  const wrap = $id('toastWrap');
+  const el = document.createElement('div');
+  el.className = `toast${ok ? '' : ' error'}`;
+  el.innerHTML = `<span class="toast-icon">${ok ? '✓' : '✕'}</span> ${esc(msg)}`;
+  wrap.appendChild(el);
+  requestAnimationFrame(() => { requestAnimationFrame(() => el.classList.add('show')); });
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 250); }, 3000);
+}
+
+async function api(method, path, body) {
+  const t0 = Date.now();
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  try {
+    const res = await fetch(path, opts);
+    const data = await res.json().catch(() => ({ ok: false, error: 'invalid_response' }));
+    $id('sbTime').textContent = `${Date.now() - t0}ms`;
+    return data;
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+// ── Connection status ─────────────────────────────────────────────────────────
+async function checkStatus() {
+  const data = await api('GET', '/api/db/status').catch(() => ({ ok: false }));
+  _dbEnabled = !!data.db_enabled;
+  const dot = $id('connDot');
+  const txt = $id('connText');
+  if (_dbEnabled) {
+    dot.className = 'conn-dot ok';
+    txt.textContent = 'gfm@localhost';
+  } else {
+    dot.className = 'conn-dot err';
+    txt.textContent = 'Not connected';
+  }
+  return _dbEnabled;
+}
+
+// ── View switching ───────────────────────────────────────────────────────────
+function showView(view) {
+  _view = view;
+  document.querySelectorAll('.sidebar-item[id^="nav-"]').forEach(el => el.classList.remove('active'));
+  $id(`nav-${view}`).classList.add('active');
+  $id('breadcrumbTable').textContent = `gfm_${view}`;
+  $id('tableBarTitle').textContent = `gfm_${view}`;
+  $id('groupTabs').innerHTML = '';
+
+  if (view === 'groups') {
+    $id('groupTabs').innerHTML = '';
+    renderGroupsTable();
+  } else {
+    renderGroupFilterTabs();
+    if (view === 'members') renderMembersTable();
+    else renderTransactionsTable();
+  }
+}
+
+// ── Groups ───────────────────────────────────────────────────────────────────
+async function loadGroups() {
+  const data = await api('GET', '/api/groups');
+  _groups = data.ok ? (data.groups || []) : [];
+  $id('cnt-groups').textContent = _groups.length;
+  if (_groups.length && !_selectedGid) _selectedGid = _groups[0].id;
+  return _groups;
+}
+
+function renderGroupsTable() {
+  $id('tableBarSub').textContent = `${_groups.length} rows`;
+  $id('sbRows').textContent = `${_groups.length} rows`;
+
+  if (!_groups.length) {
+    $id('contentArea').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">▤</div>
+        <div class="empty-state-title">No rows in gfm_groups</div>
+        <div class="empty-state-sub">Click <strong>+ Insert Row</strong> or use <strong>Seed Sample Data</strong> to add a group.</div>
+      </div>`;
+    return;
+  }
+
+  const rows = _groups.map((g, i) => `
+    <tr>
+      <td class="row-num">${i + 1}</td>
+      <td class="mono">${esc(g.id)}</td>
+      <td>${esc(g.name)}</td>
+      <td class="mono" style="color:var(--muted);font-size:11px">${fmtDatetime(g.created_at)}</td>
+      <td class="action-col">
+        <button class="btn btn-sm btn-ghost" onclick="showView('members');selectGroup('${esc(g.id)}')" title="View members">Members</button>
+        <button class="btn btn-sm btn-danger-ghost" onclick="confirmDelete('Delete group <code>${esc(g.id)}</code> and all its rows?', () => deleteGroup('${esc(g.id)}'))" title="Delete">✕</button>
+      </td>
+    </tr>`).join('');
+
+  $id('contentArea').innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="row-num">#</th>
+            <th>id</th>
+            <th>name</th>
+            <th>created_at</th>
+            <th class="action-col"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function createGroup() {
+  const name = $id('gName').value.trim();
+  if (!name) { toast('name is required', false); return; }
+  const body = { name };
+  const id = $id('gId').value.trim();
+  if (id) body.id = id;
+  const data = await api('POST', '/api/groups', body);
+  if (data.ok) {
+    toast(`Inserted 1 row into gfm_groups`);
+    closeModal('modalGroup');
+    await loadGroups();
+    renderGroupsTable();
+  } else toast(data.error, false);
+}
+
+async function deleteGroup(gid) {
+  const data = await api('DELETE', `/api/groups/${enc(gid)}`);
+  if (data.ok) {
+    toast(`Deleted group ${gid} and related rows`);
+    if (_selectedGid === gid) _selectedGid = null;
+    await loadGroups();
+    renderGroupsTable();
+  } else toast(data.error, false);
+}
+
+// ── Group filter tabs ─────────────────────────────────────────────────────────
+function renderGroupFilterTabs() {
+  $id('groupTabs').innerHTML = _groups.map(g => `
+    <div class="tab-item${g.id === _selectedGid ? ' active' : ''}" onclick="selectGroup('${esc(g.id)}')">${esc(g.name)}</div>
+  `).join('');
+}
+
+function selectGroup(gid) {
+  _selectedGid = gid;
+  renderGroupFilterTabs();
+  if (_view === 'members') renderMembersTable();
+  else if (_view === 'transactions') renderTransactionsTable();
+}
+
+// ── Members ───────────────────────────────────────────────────────────────────
+async function loadMembers(gid) {
+  if (!gid) { _members = []; return; }
+  const data = await api('GET', `/api/groups/${enc(gid)}/members`);
+  _members = data.ok ? (data.members || []) : [];
+  $id('cnt-members').textContent = _members.length;
+}
+
+async function renderMembersTable() {
+  if (_selectedGid) await loadMembers(_selectedGid);
+  const grpName = _groups.find(g => g.id === _selectedGid)?.name || _selectedGid || '—';
+  $id('tableBarSub').textContent = `group_id = '${_selectedGid || ''}' · ${_members.length} rows`;
+  $id('sbRows').textContent = `${_members.length} rows`;
+
+  if (!_selectedGid) {
+    $id('contentArea').innerHTML = `<div class="empty-state"><div class="empty-state-icon">↑</div><div class="empty-state-title">Select a group</div><div class="empty-state-sub">Choose a group tab above to filter rows.</div></div>`;
+    return;
+  }
+  if (!_members.length) {
+    $id('contentArea').innerHTML = `<div class="empty-state"><div class="empty-state-icon">▤</div><div class="empty-state-title">No rows for group "${esc(grpName)}"</div><div class="empty-state-sub">Click <strong>+ Insert Row</strong> to add a member.</div></div>`;
+    return;
+  }
+
+  const rows = _members.map((m, i) => `
+    <tr>
+      <td class="row-num">${i + 1}</td>
+      <td class="mono">${esc(m.id)}</td>
+      <td class="mono" style="color:var(--muted)">${esc(m.group_id)}</td>
+      <td><strong>${esc(m.name)}</strong></td>
+      <td>${m.confirmed ? '<span class="badge badge-green">1</span>' : '<span class="badge badge-red">0</span>'}</td>
+      <td class="mono">${fmtMoney(m.balance)}</td>
+      <td class="mono" style="color:var(--muted)">${Number(m.weight).toFixed(4)}</td>
+      <td class="mono" style="color:var(--muted);font-size:11px">${fmtDatetime(m.created_at)}</td>
+      <td class="action-col">
+        <button class="btn btn-sm btn-danger-ghost" onclick="confirmDelete('Delete member <code>${esc(m.id)}</code>?', () => deleteMember('${esc(m.id)}'))" title="Delete">✕</button>
+      </td>
+    </tr>`).join('');
+
+  $id('contentArea').innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="row-num">#</th>
+            <th>id</th>
+            <th>group_id</th>
+            <th>name</th>
+            <th>confirmed</th>
+            <th>balance</th>
+            <th>weight</th>
+            <th>created_at</th>
+            <th class="action-col"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function addMember() {
+  const name = $id('mName').value.trim();
+  if (!name) { toast('name is required', false); return; }
+  const body = {
+    name,
+    confirmed: $id('mConfirmed').value === 'true',
+    balance: parseFloat($id('mBalance').value || 0),
+    weight: parseFloat($id('mWeight').value || 1),
+  };
+  const id = $id('mId').value.trim();
+  if (id) body.id = id;
+  const data = await api('POST', `/api/groups/${enc(_selectedGid)}/members`, body);
+  if (data.ok) {
+    toast(`Inserted 1 row into gfm_members`);
+    closeModal('modalMember');
+    await renderMembersTable();
+  } else toast(data.error, false);
+}
+
+async function deleteMember(mid) {
+  const data = await api('DELETE', `/api/groups/${enc(_selectedGid)}/members/${enc(mid)}`);
+  if (data.ok) { toast(`Deleted row from gfm_members`); await renderMembersTable(); }
+  else toast(data.error, false);
+}
+
+// ── Transactions ──────────────────────────────────────────────────────────────
+async function loadTransactions(gid) {
+  if (!gid) { _transactions = []; return; }
+  const data = await api('GET', `/api/groups/${enc(gid)}/transactions`);
+  _transactions = data.ok ? (data.transactions || []) : [];
+  $id('cnt-transactions').textContent = _transactions.length;
+}
+
+const CAT_BADGE = { rent:'badge-red', utilities:'badge-blue', groceries:'badge-green', subscription:'badge-orange', entertainment:'badge-grey', travel:'badge-yellow', other:'badge-grey' };
+
+async function renderTransactionsTable() {
+  if (_selectedGid) await loadTransactions(_selectedGid);
+  const memberMap = Object.fromEntries(_members.map(m => [m.id, m.name]));
+  const total = _transactions.reduce((s, t) => s + Number(t.amount || 0), 0);
+  $id('tableBarSub').textContent = `group_id = '${_selectedGid || ''}' · ${_transactions.length} rows · total £${total.toFixed(2)}`;
+  $id('sbRows').textContent = `${_transactions.length} rows`;
+
+  if (!_selectedGid) {
+    $id('contentArea').innerHTML = `<div class="empty-state"><div class="empty-state-icon">↑</div><div class="empty-state-title">Select a group</div><div class="empty-state-sub">Choose a group tab above to filter rows.</div></div>`;
+    return;
+  }
+  if (!_transactions.length) {
+    $id('contentArea').innerHTML = `<div class="empty-state"><div class="empty-state-icon">▤</div><div class="empty-state-title">No transactions yet</div><div class="empty-state-sub">Click <strong>+ Insert Row</strong> to record a transaction.</div></div>`;
+    return;
+  }
+
+  const rows = _transactions.map((t, i) => {
+    const payerName = memberMap[t.payer_member_id] || t.payer_member_id;
+    const catBadge = t.category ? `<span class="badge ${CAT_BADGE[t.category] || 'badge-grey'}">${esc(t.category)}</span>` : '<span class="null-cell">NULL</span>';
+    return `<tr>
+      <td class="row-num">${i + 1}</td>
+      <td class="mono">${esc(t.id)}</td>
+      <td class="mono" style="color:var(--muted)">${esc(t.group_id)}</td>
+      <td><strong>${esc(payerName)}</strong> <span class="mono" style="color:var(--muted);font-size:11px">${esc(t.payer_member_id)}</span></td>
+      <td class="mono"><strong>£${Number(t.amount).toFixed(2)}</strong></td>
+      <td>${esc(t.currency || 'GBP')}</td>
+      <td>${catBadge}</td>
+      <td class="mono" style="color:var(--muted)">${fmtDate(t.date)}</td>
+      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${nullOrVal(t.note || t.receipt_text)}</td>
+      <td class="action-col">
+        <button class="btn btn-sm btn-danger-ghost" onclick="confirmDelete('Delete transaction <code>${esc(t.id)}</code>?', () => deleteTx('${esc(t.id)}'))" title="Delete">✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  $id('contentArea').innerHTML = `
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="row-num">#</th>
+            <th>id</th>
+            <th>group_id</th>
+            <th>payer_member_id</th>
+            <th>amount</th>
+            <th>currency</th>
+            <th>category</th>
+            <th>date</th>
+            <th>note / receipt</th>
+            <th class="action-col"></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+async function addTransaction() {
+  const payer = $id('tPayer').value;
+  const amount = parseFloat($id('tAmount').value);
+  if (!payer || !amount || amount <= 0) { toast('payer and positive amount required', false); return; }
+  const body = {
+    payer_member_id: payer,
+    amount,
+    category: $id('tCategory').value || undefined,
+    date: $id('tDate').value,
+    note: $id('tNote').value.trim() || undefined,
+    receipt_text: $id('tReceipt').value.trim() || undefined,
+  };
+  const data = await api('POST', `/api/groups/${enc(_selectedGid)}/transactions`, body);
+  if (data.ok) {
+    toast(`Inserted 1 row into gfm_transactions`);
+    closeModal('modalTx');
+    await renderTransactionsTable();
+  } else toast(data.error, false);
+}
+
+async function deleteTx(tid) {
+  const data = await api('DELETE', `/api/groups/${enc(_selectedGid)}/transactions/${enc(tid)}`);
+  if (data.ok) { toast(`Deleted row from gfm_transactions`); await renderTransactionsTable(); }
+  else toast(data.error, false);
+}
+
+// ── Delete confirm ────────────────────────────────────────────────────────────
+function confirmDelete(msg, cb) {
+  $id('deleteMsg').innerHTML = msg;
+  _deleteCallback = cb;
+  $id('confirmDeleteBtn').onclick = () => { closeModal('modalDelete'); cb(); };
+  $id('modalDelete').classList.add('open');
+}
+
+// ── Insert modal router ───────────────────────────────────────────────────────
+function openInsertModal() {
+  if (_view === 'groups') {
+    $id('gId').value = ''; $id('gName').value = '';
+    $id('modalGroup').classList.add('open'); $id('gName').focus();
+  } else if (_view === 'members') {
+    if (!_selectedGid) { toast('Select a group first', false); return; }
+    $id('mId').value = ''; $id('mName').value = ''; $id('mBalance').value = '0'; $id('mWeight').value = '1'; $id('mConfirmed').value = 'true';
+    $id('modalMember').classList.add('open'); $id('mName').focus();
+  } else {
+    if (!_selectedGid) { toast('Select a group first', false); return; }
+    // populate payer dropdown
+    const sel = $id('tPayer');
+    sel.innerHTML = _members.map(m => `<option value="${esc(m.id)}">${esc(m.name)} (${esc(m.id)})</option>`).join('');
+    $id('tAmount').value = ''; $id('tCategory').value = ''; $id('tDate').value = new Date().toISOString().slice(0,10); $id('tNote').value = ''; $id('tReceipt').value = '';
+    $id('modalTx').classList.add('open'); $id('tAmount').focus();
+  }
+}
+
+function openSeedModal() { $id('modalSeed').classList.add('open'); }
+
+async function seedData() {
+  const data = await api('POST', '/api/seed');
+  closeModal('modalSeed');
+  if (data.ok) {
+    toast('Sample data seeded successfully');
+    await refreshAll();
+  } else toast(data.error, false);
+}
+
+// ── Modal helpers ─────────────────────────────────────────────────────────────
+function closeModal(id) { $id(id).classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.open').forEach(el => el.classList.remove('open'));
+});
+
+// ── Refresh ───────────────────────────────────────────────────────────────────
+async function refreshAll() {
+  await loadGroups();
+  if (_selectedGid) {
+    await loadMembers(_selectedGid);
+    await loadTransactions(_selectedGid);
+  }
+  showView(_view);
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+async function boot() {
+  $id('sbDb').textContent = 'DB: gfm';
+  const ok = await checkStatus();
+  if (!ok) {
+    $id('contentArea').innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon" style="color:var(--red)">⚠</div>
+        <div class="empty-state-title">Database not connected</div>
+        <div class="empty-state-sub">Set <code>DATABASE_URL</code> or <code>MYSQL_HOST</code> / <code>MYSQL_USER</code> / <code>MYSQL_PASSWORD</code> / <code>MYSQL_DATABASE</code> environment variables, then restart the server.</div>
+      </div>`;
+    return;
+  }
+  await loadGroups();
+  showView('groups');
+}
+boot();
+</script>
+</body>
+</html>

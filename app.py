@@ -6,11 +6,19 @@ import os
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta, timezone
+from urllib.parse import urlparse
 
 UTC = timezone.utc
 from typing import Any
 
 from flask import Flask, jsonify, render_template, request
+
+try:
+    import pymysql
+    import pymysql.cursors
+    _PYMYSQL_AVAILABLE = True
+except ImportError:
+    _PYMYSQL_AVAILABLE = False
 
 app = Flask(__name__)
 VALID_CATEGORIES = {"rent", "utilities", "groceries", "subscription", "entertainment", "travel", "other"}
@@ -27,6 +35,161 @@ APP_CONTEXT: dict[str, Any] = {
 }
 
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+# ── MySQL database layer ────────────────────────────────────────────────────
+
+_DB_ENABLED = False
+
+def _parse_db_config() -> dict | None:
+    url = (
+        os.getenv("DATABASE_URL") or
+        os.getenv("MYSQL_URL") or
+        os.getenv("MYSQL_PRIVATE_URL") or
+        ""
+    ).strip()
+    if url:
+        p = urlparse(url)
+        return {
+            "host": p.hostname or "localhost",
+            "port": p.port or 3306,
+            "user": p.username or "root",
+            "password": p.password or "",
+            "database": (p.path or "/gfm").lstrip("/") or "gfm",
+        }
+    host = os.getenv("MYSQLHOST") or os.getenv("MYSQL_HOST", "").strip()
+    if host:
+        return {
+            "host": host,
+            "port": int(os.getenv("MYSQLPORT") or os.getenv("MYSQL_PORT") or 3306),
+            "user": os.getenv("MYSQLUSER") or os.getenv("MYSQL_USER") or "root",
+            "password": os.getenv("MYSQLPASSWORD") or os.getenv("MYSQL_PASSWORD") or "",
+            "database": os.getenv("MYSQLDATABASE") or os.getenv("MYSQL_DATABASE") or "gfm",
+        }
+    return None
+
+
+def _get_conn():
+    if not _PYMYSQL_AVAILABLE:
+        raise RuntimeError("PyMySQL not installed. Add PyMySQL to requirements.txt.")
+    cfg = _parse_db_config()
+    if not cfg:
+        raise RuntimeError("No database configured. Set DATABASE_URL or MYSQL_* env vars.")
+    return pymysql.connect(
+        host=cfg["host"],
+        port=cfg["port"],
+        user=cfg["user"],
+        password=cfg["password"],
+        database=cfg["database"],
+        charset="utf8mb4",
+        cursorclass=pymysql.cursors.DictCursor,
+        autocommit=True,
+    )
+
+
+_SCHEMA_STATEMENTS = [
+    """CREATE TABLE IF NOT EXISTS gfm_groups (
+        id VARCHAR(64) PRIMARY KEY,
+        name VARCHAR(200) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+    """CREATE TABLE IF NOT EXISTS gfm_members (
+        id VARCHAR(64) PRIMARY KEY,
+        group_id VARCHAR(64) NOT NULL,
+        name VARCHAR(200) NOT NULL,
+        confirmed TINYINT(1) NOT NULL DEFAULT 1,
+        balance DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+        weight DECIMAL(8,4) NOT NULL DEFAULT 1.0000,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_gm_group (group_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+    """CREATE TABLE IF NOT EXISTS gfm_transactions (
+        id VARCHAR(64) PRIMARY KEY,
+        group_id VARCHAR(64) NOT NULL,
+        payer_member_id VARCHAR(64) NOT NULL,
+        amount DECIMAL(12,2) NOT NULL,
+        currency VARCHAR(10) NOT NULL DEFAULT 'GBP',
+        category VARCHAR(50),
+        date DATE NOT NULL,
+        note TEXT,
+        vendor VARCHAR(200),
+        receipt_text TEXT,
+        split_method VARCHAR(50),
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_gt_group (group_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+]
+
+
+def _init_db():
+    global _DB_ENABLED
+    if not _PYMYSQL_AVAILABLE:
+        return
+    cfg = _parse_db_config()
+    if not cfg:
+        return
+    try:
+        conn = _get_conn()
+        with conn.cursor() as cur:
+            for stmt in _SCHEMA_STATEMENTS:
+                cur.execute(stmt)
+        conn.close()
+        _DB_ENABLED = True
+        print("[GFM] MySQL connected — schema ready.")
+    except Exception as exc:
+        print(f"[GFM] MySQL unavailable, running in demo mode. ({exc})")
+
+
+def _row_dates_to_str(row: dict) -> dict:
+    for k, v in row.items():
+        if hasattr(v, "isoformat"):
+            row[k] = v.isoformat()
+    return row
+
+
+def _load_group_body(gid: str) -> dict | None:
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM gfm_groups WHERE id=%s", (gid,))
+        group = cur.fetchone()
+        if not group:
+            conn.close()
+            return None
+        cur.execute("SELECT * FROM gfm_members WHERE group_id=%s ORDER BY created_at", (gid,))
+        members_rows = cur.fetchall()
+        cur.execute(
+            "SELECT * FROM gfm_transactions WHERE group_id=%s ORDER BY date ASC, created_at ASC",
+            (gid,),
+        )
+        tx_rows = cur.fetchall()
+    conn.close()
+
+    transactions = []
+    for t in tx_rows:
+        tx: dict[str, Any] = {
+            "id": t["id"],
+            "amount": float(t["amount"]),
+            "currency": t["currency"] or "GBP",
+            "payer_member_id": t["payer_member_id"],
+            "date": t["date"].isoformat() if hasattr(t["date"], "isoformat") else str(t["date"]),
+        }
+        for field in ("category", "note", "vendor", "receipt_text", "split_method"):
+            if t.get(field):
+                tx[field] = t[field]
+        transactions.append(tx)
+
+    return {
+        "group": {"id": group["id"], "name": group["name"]},
+        "members": [
+            {"id": m["id"], "name": m["name"], "confirmed": bool(m["confirmed"])}
+            for m in members_rows
+        ],
+        "balances": {m["id"]: float(m["balance"]) for m in members_rows},
+        "weights": {m["id"]: float(m["weight"]) for m in members_rows},
+        "transactions": transactions,
+    }
+
+
+_init_db()
 
 
 def _safe_read_text(path: str, max_chars: int = 120_000) -> str:
@@ -579,6 +742,11 @@ def index():
     )
 
 
+@app.get("/db")
+def db_admin():
+    return render_template("db.html")
+
+
 @app.get("/health")
 def health():
     return jsonify({"ok": True})
@@ -980,6 +1148,272 @@ def webhook_demo2():
     if status == 200 and isinstance(data, dict) and data.get("ok"):
         _record_app_context(safe_body, data)
     return jsonify(data), status
+
+
+# ── Database status ─────────────────────────────────────────────────────────
+
+@app.get("/api/db/status")
+def api_db_status():
+    return jsonify({"ok": True, "db_enabled": _DB_ENABLED})
+
+
+# ── Group CRUD ───────────────────────────────────────────────────────────────
+
+@app.get("/api/groups")
+def api_list_groups():
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("SELECT id, name, created_at FROM gfm_groups ORDER BY created_at DESC")
+        rows = cur.fetchall()
+    conn.close()
+    return jsonify({"ok": True, "groups": [_row_dates_to_str(dict(r)) for r in rows]})
+
+
+@app.post("/api/groups")
+def api_create_group():
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = request.get_json(silent=True) or {}
+    gid = str(body.get("id") or "").strip() or f"g{int(datetime.now(UTC).timestamp())}"
+    name = str(body.get("name") or "").strip()
+    if not name:
+        return _error("name required")
+    members = body.get("members") if isinstance(body.get("members"), list) else []
+
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("INSERT IGNORE INTO gfm_groups (id, name) VALUES (%s, %s)", (gid, name))
+        for m in members:
+            if not isinstance(m, dict):
+                continue
+            mid = str(m.get("id") or "").strip()
+            mname = str(m.get("name") or mid).strip()
+            if not mid:
+                continue
+            cur.execute(
+                "INSERT IGNORE INTO gfm_members (id, group_id, name, confirmed, balance, weight) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (mid, gid, mname, 1 if m.get("confirmed", True) else 0,
+                 float(m.get("balance", 0)), float(m.get("weight", 1))),
+            )
+    conn.close()
+    return jsonify({"ok": True, "id": gid, "name": name})
+
+
+@app.get("/api/groups/<gid>")
+def api_get_group(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("SELECT * FROM gfm_groups WHERE id=%s", (gid,))
+        group = cur.fetchone()
+    conn.close()
+    if not group:
+        return _error("group not found", 404)
+    return jsonify({"ok": True, "group": _row_dates_to_str(dict(group))})
+
+
+@app.delete("/api/groups/<gid>")
+def api_delete_group(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM gfm_transactions WHERE group_id=%s", (gid,))
+        cur.execute("DELETE FROM gfm_members WHERE group_id=%s", (gid,))
+        cur.execute("DELETE FROM gfm_groups WHERE id=%s", (gid,))
+    conn.close()
+    return jsonify({"ok": True})
+
+
+# ── Member CRUD ──────────────────────────────────────────────────────────────
+
+@app.get("/api/groups/<gid>/members")
+def api_list_members(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM gfm_members WHERE group_id=%s ORDER BY created_at", (gid,)
+        )
+        rows = cur.fetchall()
+    conn.close()
+    return jsonify({"ok": True, "members": [_row_dates_to_str(dict(r)) for r in rows]})
+
+
+@app.post("/api/groups/<gid>/members")
+def api_add_member(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = request.get_json(silent=True) or {}
+    mid = str(body.get("id") or "").strip() or f"u{int(datetime.now(UTC).timestamp() * 1000)}"
+    name = str(body.get("name") or "").strip()
+    if not name:
+        return _error("name required")
+    confirmed = bool(body.get("confirmed", True))
+    balance = float(body.get("balance", 0))
+    weight = float(body.get("weight", 1))
+
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO gfm_members (id, group_id, name, confirmed, balance, weight) "
+            "VALUES (%s, %s, %s, %s, %s, %s) "
+            "ON DUPLICATE KEY UPDATE name=VALUES(name), confirmed=VALUES(confirmed), "
+            "balance=VALUES(balance), weight=VALUES(weight)",
+            (mid, gid, name, 1 if confirmed else 0, balance, weight),
+        )
+    conn.close()
+    return jsonify({"ok": True, "id": mid})
+
+
+@app.delete("/api/groups/<gid>/members/<mid>")
+def api_delete_member(gid, mid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("DELETE FROM gfm_members WHERE id=%s AND group_id=%s", (mid, gid))
+    conn.close()
+    return jsonify({"ok": True})
+
+
+# ── Transaction CRUD ─────────────────────────────────────────────────────────
+
+@app.get("/api/groups/<gid>/transactions")
+def api_list_transactions(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT * FROM gfm_transactions WHERE group_id=%s ORDER BY date DESC, created_at DESC",
+            (gid,),
+        )
+        rows = cur.fetchall()
+    conn.close()
+    return jsonify({"ok": True, "transactions": [_row_dates_to_str(dict(r)) for r in rows]})
+
+
+@app.post("/api/groups/<gid>/transactions")
+def api_add_transaction(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = request.get_json(silent=True) or {}
+    tid = str(body.get("id") or "").strip() or f"t{int(datetime.now(UTC).timestamp() * 1000)}"
+    payer = str(body.get("payer_member_id") or "").strip()
+    amount = _to_num(body.get("amount"), -1)
+    if not payer or amount <= 0:
+        return _error("payer_member_id and positive amount required")
+
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO gfm_transactions "
+            "(id, group_id, payer_member_id, amount, currency, category, date, note, vendor, receipt_text, split_method) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (
+                tid, gid, payer, _round2(amount),
+                str(body.get("currency") or "GBP"),
+                str(body.get("category") or "") or None,
+                str(body.get("date") or date.today().isoformat()),
+                str(body.get("note") or "") or None,
+                str(body.get("vendor") or "") or None,
+                str(body.get("receipt_text") or "") or None,
+                str(body.get("split_method") or "") or None,
+            ),
+        )
+    conn.close()
+    return jsonify({"ok": True, "id": tid})
+
+
+@app.delete("/api/groups/<gid>/transactions/<tid>")
+def api_delete_transaction(gid, tid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM gfm_transactions WHERE id=%s AND group_id=%s", (tid, gid)
+        )
+    conn.close()
+    return jsonify({"ok": True})
+
+
+# ── DB-backed calculation ────────────────────────────────────────────────────
+
+@app.get("/api/groups/<gid>/payload")
+def api_group_payload(gid):
+    """Return group data from DB in the same format as the demo payload."""
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = _load_group_body(gid)
+    if body is None:
+        return _error("group not found", 404)
+    return jsonify({"ok": True, **body})
+
+
+@app.post("/api/groups/<gid>/calculate")
+def api_group_calculate(gid):
+    """Load group from DB and run the full GFM calculation pipeline."""
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = _load_group_body(gid)
+    if body is None:
+        return _error("group not found", 404)
+
+    body["consent"] = {
+        "given": True,
+        "policy_version": PRIVACY_POLICY_VERSION,
+        "consented_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        "method": "db_session",
+        "actor": "end_user",
+    }
+    data, status = build_gfm(body)
+    if status == 200 and isinstance(data, dict) and data.get("ok"):
+        _record_app_context(body, data)
+    return jsonify(data), status
+
+
+# ── Seed sample data ─────────────────────────────────────────────────────────
+
+@app.post("/api/seed")
+def api_seed():
+    """Populate DB with the demo sample data (idempotent)."""
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute("INSERT IGNORE INTO gfm_groups (id, name) VALUES ('g1', 'Flat A')")
+        for mid, mname, confirmed, balance in [
+            ("u1", "Mason",  1,  120.00),
+            ("u2", "Ethan",  0,  -15.00),
+            ("u3", "Olivia", 1,   40.00),
+        ]:
+            cur.execute(
+                "INSERT IGNORE INTO gfm_members (id, group_id, name, confirmed, balance, weight) "
+                "VALUES (%s, 'g1', %s, %s, %s, 1.0)",
+                (mid, mname, confirmed, balance),
+            )
+        for tid, payer, amount, cat, tx_date, note, receipt in [
+            ("t1", "u1", 1200.00, "rent",         "2026-02-01", "February rent",      None),
+            ("t2", "u1",  180.00, "utilities",     "2026-02-20", "Gas and electricity",None),
+            ("t3", "u2",   96.50, "groceries",     "2026-02-21", None, "Milk - 3.20\nRice - 12.00\nChicken - 8.50"),
+            ("t4", "u1",   29.99, "subscription",  "2026-02-18", "Netflix family",     None),
+            ("t5", "u3",   64.00, "utilities",     "2026-02-24", "Broadband",          None),
+        ]:
+            cur.execute(
+                "INSERT IGNORE INTO gfm_transactions "
+                "(id, group_id, payer_member_id, amount, currency, category, date, note, receipt_text) "
+                "VALUES (%s, 'g1', %s, %s, 'GBP', %s, %s, %s, %s)",
+                (tid, payer, amount, cat, tx_date, note, receipt),
+            )
+    conn.close()
+    return jsonify({"ok": True, "message": "Sample data seeded into database."})
 
 
 if __name__ == "__main__":
