@@ -576,7 +576,7 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
                 {
                     "type": "low_funds",
                     "severity": "high",
-                    "message": f"{name_by_id[mid]} may face a cash shortage based on current balance.",
+                    "message": f"{name_by_id[mid]} still owes £{abs(b):.2f} — repayment pending",
                     "related_transaction_id": None,
                     "member_ids": [mid],
                 }

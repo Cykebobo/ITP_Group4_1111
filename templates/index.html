@@ -891,7 +891,7 @@ function renderAlerts(alerts){ const root = byId('alerts'); if(!alerts || !alert
   const sorted = [...alerts].sort((a, b) => ({high:3, medium:2, low:1}[b.severity || 'low'] - ({high:3, medium:2, low:1}[a.severity || 'low'])));
   const top = sorted[0];
   const next = sorted.slice(1,3);
-  const topTitle = ['pending_confirmation','advance_imbalance','low_funds'].includes(top.type) ? 'Balance not yet restored' : top.message;
+  const topTitle = top.type === 'pending_confirmation' ? 'Balance not yet restored' : top.message;
   root.innerHTML = `
     <article class="alert-card ${top.severity || 'low'}">
       <div class="alert-meta"><span class="badge ${badgeTone(top.severity)}">${titleCase(top.severity || 'medium')}</span></div>
