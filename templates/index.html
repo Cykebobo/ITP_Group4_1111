@@ -262,6 +262,16 @@
     .net-value.positive{color:var(--ok)}
     .net-value.negative{color:var(--danger)}
     .alert-stack{display:flex;flex-direction:column;gap:10px}
+    .gchat-shell{display:flex;flex-direction:column;height:320px;border-radius:16px;overflow:hidden;border:1px solid var(--panel-line);background:var(--panel-green)}
+    .gchat-msgs{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+    .gchat-bubble{max-width:80%;padding:9px 13px;border-radius:16px;font-size:13px;line-height:1.4;word-break:break-word}
+    .gchat-bubble.mine{align-self:flex-end;background:var(--brand);color:#fff;border-bottom-right-radius:4px}
+    .gchat-bubble.other{align-self:flex-start;background:#fff;border:1px solid var(--panel-line);color:#111;border-bottom-left-radius:4px}
+    .gchat-sender{font-size:10px;font-weight:700;margin-bottom:2px;opacity:.7}
+    .gchat-time{font-size:9px;opacity:.5;margin-top:2px;text-align:right}
+    .gchat-input-row{display:flex;gap:8px;padding:10px;border-top:1px solid var(--panel-line);background:#fff}
+    .gchat-input{flex:1;border:1px solid var(--panel-line);border-radius:20px;padding:8px 14px;font-size:13px;outline:none;background:var(--panel-green)}
+    .gchat-send{flex:0 0 auto;padding:8px 16px;border-radius:20px;background:var(--brand);color:#fff;font-size:13px;font-weight:600;border:none;cursor:pointer}
     .alert-card{padding:14px;border-radius:14px;background:var(--panel-green);border:1px solid var(--panel-line);box-shadow:0 2px 8px rgba(20,58,40,.04)}
     .alert-card.high{border-color:#ebc0c0;background:#fff7f7}
     .alert-card.medium{border-color:#ead6a7;background:#fffaf0}
@@ -548,8 +558,18 @@ Bostjan: Solution and AI lead</div>
 
         <section id="page-alerts" class="page">
           <div class="scroll">
-            <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Blockers</div></div></div><div id="alerts" class="list"></div></div></section>
             <section class="section"><div class="card"><div class="section-head"><div><div class="section-title">Ready to send</div></div></div><div id="notifications" class="list"></div></div></section>
+            <section class="section"><div class="card">
+              <div class="section-head"><div><div class="section-title">Group chat</div></div></div>
+              <div class="gchat-shell">
+                <div id="gchatMsgs" class="gchat-msgs"><div style="text-align:center;color:#aaa;font-size:12px;padding:20px">No messages yet.</div></div>
+                <div class="gchat-input-row">
+                  <select id="gchatSender" style="border:1px solid var(--panel-line);border-radius:20px;padding:8px 10px;font-size:12px;background:var(--panel-green);max-width:90px"></select>
+                  <input id="gchatInput" class="gchat-input" type="text" placeholder="Message…" maxlength="500" />
+                  <button id="gchatSend" class="gchat-send" type="button">Send</button>
+                </div>
+              </div>
+            </div></section>
           </div>
         </section>
       </div>
@@ -1376,6 +1396,48 @@ byId('startAnalysis').onclick = () => { aiClearHistory(); runPipeline(); };
 // ── Double-click logo → open database manager ────────────────────────────────
 byId('brandLogo').addEventListener('dblclick', () => { window.open('/db', '_blank'); });
 
+// ── Group chat ───────────────────────────────────────────────────────────────
+let _gchatMembers = [];
+function gchatPopulateSenders(members){
+  _gchatMembers = members;
+  const sel = byId('gchatSender');
+  sel.innerHTML = members.map(m => `<option value="${m.name}">${m.name}</option>`).join('');
+}
+function gchatRender(messages){
+  const root = byId('gchatMsgs');
+  if(!messages || !messages.length){ root.innerHTML = '<div style="text-align:center;color:#aaa;font-size:12px;padding:20px">No messages yet.</div>'; return; }
+  const myName = byId('gchatSender')?.value || '';
+  root.innerHTML = messages.map(m => {
+    const mine = m.sender_name === myName;
+    const t = m.created_at ? new Date(m.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : '';
+    return `<div class="gchat-bubble ${mine?'mine':'other'}"><div class="gchat-sender">${m.sender_name}</div>${m.content}<div class="gchat-time">${t}</div></div>`;
+  }).join('');
+  root.scrollTop = root.scrollHeight;
+}
+async function gchatLoad(){
+  if(!_activeGroupId) return;
+  try{
+    const res = await fetch(`/api/groups/${_activeGroupId}/messages`);
+    const data = await res.json().catch(()=>({}));
+    if(data.ok) gchatRender(data.messages || []);
+  }catch(_){}
+}
+async function gchatSend(){
+  const sender = String(byId('gchatSender')?.value||'').trim();
+  const content = String(byId('gchatInput')?.value||'').trim();
+  if(!sender||!content) return;
+  byId('gchatInput').value = '';
+  await fetch(`/api/groups/${_activeGroupId}/messages`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({sender_name:sender,content})});
+  await gchatLoad();
+}
+document.addEventListener('DOMContentLoaded', ()=>{
+  byId('gchatSend')?.addEventListener('click', gchatSend);
+  byId('gchatInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();gchatSend();} });
+});
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', ()=>{
+  if(btn.dataset.page === 'alerts') gchatLoad();
+}));
+
 async function boot(){
   updateConsentUi(); switchPage('home'); setStage(1);
   renderBillDeck([], []); renderSettlements([], {}); renderAlerts([]); renderNotifications([]); renderInsights([]);
@@ -1383,6 +1445,13 @@ async function boot(){
   renderHomeVisuals({}, []); aiLoadSettings(); aiLoadHistory();
   byId('reviewAction').addEventListener('click', () => switchPage('settle'));
   await loadGroups();
+  if(_activeGroupId){
+    try{
+      const mr = await fetch(`/api/groups/${_activeGroupId}/members`);
+      const md = await mr.json().catch(()=>({}));
+      if(md.ok && md.members?.length) gchatPopulateSenders(md.members);
+    }catch(_){}
+  }
   if(!_dbAvailable && REQUIRE_PRIVACY_CONSENT && !getStoredConsent()){ openConsentModal(); byId('runStatus').textContent = 'Consent required before the first run.'; return; }
   runPipeline();
 }

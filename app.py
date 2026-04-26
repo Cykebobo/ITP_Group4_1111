@@ -117,6 +117,14 @@ _SCHEMA_STATEMENTS = [
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_gt_group (group_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+    """CREATE TABLE IF NOT EXISTS gfm_messages (
+        id VARCHAR(64) PRIMARY KEY,
+        group_id VARCHAR(64) NOT NULL,
+        sender_name VARCHAR(200) NOT NULL,
+        content TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_msg_group (group_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 ]
 
 
@@ -569,18 +577,6 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
             }
         )
 
-    for mid in member_ids:
-        b = _to_num(balances.get(mid), 0)
-        if b < 0:
-            alerts.append(
-                {
-                    "type": "low_funds",
-                    "severity": "high",
-                    "message": f"{name_by_id[mid]} still owes £{abs(b):.2f} — repayment pending",
-                    "related_transaction_id": None,
-                    "member_ids": [mid],
-                }
-            )
 
     pending = [m["id"] for m in members if isinstance(m, dict) and m.get("confirmed") is False and str(m.get("id") or "") in member_ids]
     if pending:
@@ -1519,6 +1515,44 @@ def api_group_ai_command(gid):
         msg += f" · {note}"
     msg += f"  ({tx_date})"
     return jsonify({"ok": True, "action": "added_transaction", "id": tid, "message": msg})
+
+
+# ── Group messages ───────────────────────────────────────────────────────────
+
+@app.get("/api/groups/<gid>/messages")
+def api_list_messages(gid):
+    if not _DB_ENABLED:
+        return jsonify({"ok": True, "messages": []})
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "SELECT id, sender_name, content, created_at FROM gfm_messages "
+            "WHERE group_id=%s ORDER BY created_at ASC LIMIT 100",
+            (gid,),
+        )
+        rows = cur.fetchall()
+    conn.close()
+    return jsonify({"ok": True, "messages": [_row_dates_to_str(dict(r)) for r in rows]})
+
+
+@app.post("/api/groups/<gid>/messages")
+def api_post_message(gid):
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = request.get_json(silent=True) or {}
+    sender = str(body.get("sender_name") or "").strip()
+    content = str(body.get("content") or "").strip()
+    if not sender or not content:
+        return _error("sender_name and content required")
+    mid = f"msg{int(datetime.now(UTC).timestamp() * 1000)}"
+    conn = _get_conn()
+    with conn.cursor() as cur:
+        cur.execute(
+            "INSERT INTO gfm_messages (id, group_id, sender_name, content) VALUES (%s, %s, %s, %s)",
+            (mid, gid, sender[:200], content[:2000]),
+        )
+    conn.close()
+    return jsonify({"ok": True, "id": mid})
 
 
 # ── Seed sample data ─────────────────────────────────────────────────────────
