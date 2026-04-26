@@ -1003,9 +1003,10 @@ function updateFocus(data, names, settlements){
   if(settlement){
     const fromName = names[settlement.from_member_id] || settlement.from_member_id;
     const toName = names[settlement.to_member_id] || settlement.to_member_id;
+    const second = settlements[1];
     byId('heroKicker').textContent = 'Suggestion';
     byId('heroTotal').textContent = `${fromName} owes ${toName} ${money(settlement.amount)}`;
-    byId('heroMeta').textContent = '';
+    byId('heroMeta').textContent = second ? `${names[second.from_member_id]||second.from_member_id} owes ${names[second.to_member_id]||second.to_member_id} ${money(second.amount)}` : '';
     byId('reviewAction').textContent = 'Go to settlement';
   } else if (fairness){
     const nextPayer = names[fairness.recommendation?.next_payer_member_id] || fairness.recommendation?.next_payer_member_id || 'the next member';

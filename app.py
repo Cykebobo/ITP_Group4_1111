@@ -571,6 +571,7 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
             {
                 "type": "due_reminder",
                 "severity": "medium",
+                "category": u["category"],
                 "message": f"{u['category']} bill is due on {u['due_date']}.",
                 "related_transaction_id": u["related_transaction_id"],
                 "member_ids": member_ids,
@@ -693,7 +694,21 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
 
     notifications = []
     for a in alerts[:6]:
-        notifications.append({"title": a.get("type", "alert"), "message": a.get("message", ""), "severity": a.get("severity", "medium")})
+        if a.get("type") == "due_reminder":
+            cat = str(a.get("category") or "").capitalize() or "Bill"
+            raw_msg = a.get("message", "")
+            dm = re.search(r"(\d{4}-\d{2}-\d{2})", raw_msg)
+            if dm:
+                try:
+                    d = date.fromisoformat(dm.group(1))
+                    due_str = f"Due {d.day} {d.strftime('%B')}"
+                except Exception:
+                    due_str = raw_msg
+            else:
+                due_str = raw_msg
+            notifications.append({"title": cat, "message": due_str, "severity": a.get("severity", "medium")})
+        elif a.get("type") != "pending_confirmation":
+            notifications.append({"title": a.get("type", "alert"), "message": a.get("message", ""), "severity": a.get("severity", "medium")})
 
     response = {
         "ok": True,
