@@ -601,7 +601,7 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
         fairness.append(
             {
                 "issue": "advance_imbalance",
-                "evidence": f"{top['member_name']} has paid {top['paid_total']:.2f} GBP, significantly above peers.",
+                "evidence": f"{top['member_name']} has covered £{top['paid_total']:.0f} so far — more than anyone else in the group.",
                 "recommendation": {"next_payer_member_id": second["member_id"], "strategy": "round_robin_with_cap"},
             }
         )
@@ -610,7 +610,7 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
         fairness.append(
             {
                 "issue": "rotation_hint",
-                "evidence": "Spending is close, but rotating payer reduces future imbalance risk.",
+                "evidence": "Spending is roughly even — rotating who pays next keeps the burden shared.",
                 "recommendation": {"next_payer_member_id": candidate, "strategy": "round_robin"},
             }
         )
@@ -623,40 +623,54 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
 
     insights: list[dict[str, Any]] = []
     if next_payer:
-        insights.append(
-            {
-                "type": "fairness",
-                "title": "Rotate next payer",
-                "message": f"Use {name_by_id.get(next_payer, next_payer)} as next payer to reduce advance imbalance.",
-                "action": "Apply next payer recommendation",
-            }
-        )
+        f_issue = fairness[0]["issue"] if fairness else "rotation_hint"
+        next_name = name_by_id.get(next_payer, next_payer)
+        if f_issue == "advance_imbalance":
+            f_title = f"{top['member_name']} carrying most"
+            f_msg = f"{top['member_name']} has fronted £{top['paid_total']:.0f} this cycle — let {next_name} cover the next bill."
+            f_action = f"Let {next_name} pay next"
+        else:
+            f_title = "Good balance so far"
+            f_msg = f"Costs are roughly even. {next_name} could front the next bill to keep it that way."
+            f_action = f"Suggest {next_name} pays next"
+        insights.append({"type": "fairness", "title": f_title, "message": f_msg, "action": f_action})
+
     if top_category != "other":
+        total_spend = sum(by_category.values())
+        top_amt = _round2(by_category[top_category])
+        top_pct = round(top_amt / max(total_spend, 0.01) * 100)
         insights.append(
             {
                 "type": "spend_pattern",
-                "title": "Highest spend category",
-                "message": f"{top_category.capitalize()} is the largest spend bucket this cycle.",
-                "action": "Review upcoming bills in this category",
+                "title": f"{top_category.capitalize()} dominates",
+                "message": f"Most shared costs went to {top_category} this cycle — £{top_amt:.0f} ({top_pct}%).",
+                "action": f"Review upcoming {top_category} bills",
             }
         )
+
     high_alert_count = sum(1 for a in alerts if a.get("severity") == "high")
     if high_alert_count:
+        at_risk = [name_by_id.get((a.get("member_ids") or [None])[0], "") for a in alerts if a.get("type") == "low_funds" and a.get("member_ids")]
+        if len(at_risk) == 1 and at_risk[0]:
+            risk_msg = f"{at_risk[0]} may not be able to cover the next transfer — settle sooner."
+        else:
+            risk_msg = f"{high_alert_count} members may struggle with upcoming transfers — settle sooner."
         insights.append(
             {
                 "type": "risk",
-                "title": "Cash risk detected",
-                "message": f"{high_alert_count} high-severity cash signal(s) detected.",
-                "action": "Request earlier settlement from debtors",
+                "title": "Repayment at risk",
+                "message": risk_msg,
+                "action": "Ask for earlier settlement",
             }
         )
+
     if not insights:
         insights.append(
             {
                 "type": "stability",
-                "title": "Stable cycle",
-                "message": "No major risk detected in this cycle.",
-                "action": "Keep current split strategy",
+                "title": "Clean cycle",
+                "message": "No blockers or imbalances this round — a good time to close.",
+                "action": "Keep current split",
             }
         )
 
