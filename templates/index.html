@@ -636,6 +636,21 @@ const sample = {
   ]
 };
 
+let _activeGroupId = null;
+let _dbAvailable = false;
+
+async function loadGroups(){
+  try{
+    const res = await fetch('/api/groups');
+    if(!res.ok) return;
+    const data = await res.json().catch(() => ({}));
+    if(data.ok && Array.isArray(data.groups) && data.groups.length > 0){
+      _activeGroupId = data.groups[0].id;
+      _dbAvailable = true;
+    }
+  }catch(_){}
+}
+
 const byId = (id) => document.getElementById(id);
 const money = (n) => `£${Number(n || 0).toFixed(2)}`;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -1012,18 +1027,31 @@ function updateFocus(data, names, settlements){
 
 
 async function runPipeline(){
-  if(!requireConsentOrPrompt()) return;
-  const payload = buildRequestPayload();
-  if(!payload){ byId('runStatus').textContent = 'Consent payload missing. Please grant consent first.'; openConsentModal(); return; }
   switchPage('home');
   setStage(1); byId('runStatus').classList.add('pulse'); byId('runStatus').textContent = 'Refreshing the latest group cycle…'; await wait(220);
   setStage(2); byId('runStatus').textContent = 'AI is grouping shared expenses and rebuilding the split…'; await wait(220);
   setStage(3); byId('runStatus').textContent = 'Preparing the shortest settlement path and risk checks…'; await wait(220);
   setStage(4); byId('runStatus').textContent = 'Publishing the clearest next step for the group…';
 
-  const res = await fetch('/api/demo2', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
-  const data = await res.json().catch(() => ({ok:false,error:'invalid_response'}));
-  if(!res.ok || !data.ok){ byId('runStatus').classList.remove('pulse'); byId('runStatus').textContent = `Update failed${data?.error ? ` · ${data.error}` : ''}`; if(String(data?.error || '').startsWith('privacy_consent')){ clearConsent(); updateConsentUi(); openConsentModal(); } return; }
+  let res, data;
+  if(_dbAvailable && _activeGroupId){
+    res = await fetch(`/api/groups/${_activeGroupId}/calculate`, { method:'POST', headers:{'content-type':'application/json'} });
+    data = await res.json().catch(() => ({ok:false,error:'invalid_response'}));
+    if(!res.ok || !data.ok){
+      byId('runStatus').classList.remove('pulse');
+      byId('runStatus').textContent = `DB pipeline failed${data?.error ? ` · ${data.error}` : ''} — falling back to demo data`;
+      _dbAvailable = false;
+    }
+  }
+  if(!_dbAvailable || !_activeGroupId){
+    if(!requireConsentOrPrompt()) return;
+    const payload = buildRequestPayload();
+    if(!payload){ byId('runStatus').textContent = 'Consent payload missing. Please grant consent first.'; openConsentModal(); return; }
+    res = await fetch('/api/demo2', { method:'POST', headers:{'content-type':'application/json'}, body:JSON.stringify(payload) });
+    data = await res.json().catch(() => ({ok:false,error:'invalid_response'}));
+    if(!res.ok || !data.ok){ byId('runStatus').classList.remove('pulse'); byId('runStatus').textContent = `Update failed${data?.error ? ` · ${data.error}` : ''}`; if(String(data?.error || '').startsWith('privacy_consent')){ clearConsent(); updateConsentUi(); openConsentModal(); } return; }
+  }
+  if(!data || !data.ok) return;
 
   const names = memberNameMap(data);
   const split = (data.split_suggestions || [])[0] || {settlements:[], total:0};
@@ -1186,6 +1214,29 @@ async function aiSend(){
   aiRender();
   aiPush('system', 'Thinking...');
   try{
+    // If DB is available, first check if this is a data-entry command
+    if(_dbAvailable && _activeGroupId){
+      const cmdRes = await fetch(`/api/groups/${_activeGroupId}/ai-command`, {
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body: JSON.stringify({ apiKey:cfg.apiKey, modelPreset:cfg.modelPreset, model:cfg.model, apiBase:cfg.apiBase, text })
+      });
+      const cmdData = await cmdRes.json().catch(() => ({}));
+      if(cmdRes.ok && cmdData.ok && cmdData.action === 'added_transaction'){
+        byId('aiMsgs').lastChild?.remove();
+        aiHistory.push({ role:'assistant', content: cmdData.message || 'Transaction added.' });
+        aiSaveHistory();
+        aiRender();
+        await runPipeline();
+        return;
+      }
+      if(cmdRes.ok && !cmdData.ok && cmdData.error && cmdData.error !== 'member_not_found' && cmdData.action !== 'none'){
+        byId('aiMsgs').lastChild?.remove();
+        aiPush('system', `DB error: ${cmdData.message || cmdData.error}`);
+        return;
+      }
+    }
+
     const uiContext = aiCollectUiContext();
     const scopedMessages = aiHistory.map((m) => ({ role:m.role, content:m.content }));
 
@@ -1318,7 +1369,16 @@ byId('startAnalysis').onclick = () => { aiClearHistory(); runPipeline(); };
 // ── Double-click logo → open database manager ────────────────────────────────
 byId('brandLogo').addEventListener('dblclick', () => { window.open('/db', '_blank'); });
 
-function boot(){ updateConsentUi(); switchPage('home'); setStage(1); renderBillDeck([], []); renderSettlements([], {}); renderAlerts([]); renderNotifications([]); renderInsights([]); renderBars('cat', [], 'category', 'total'); renderBars('paid', [], 'member_name', 'total'); renderNet([]); renderHomeVisuals({}, []); aiLoadSettings(); aiLoadHistory(); byId('reviewAction').addEventListener('click', () => switchPage('settle')); if(REQUIRE_PRIVACY_CONSENT && !getStoredConsent()){ openConsentModal(); byId('runStatus').textContent = 'Consent required before the first run.'; return; } runPipeline(); }
+async function boot(){
+  updateConsentUi(); switchPage('home'); setStage(1);
+  renderBillDeck([], []); renderSettlements([], {}); renderAlerts([]); renderNotifications([]); renderInsights([]);
+  renderBars('cat', [], 'category', 'total'); renderBars('paid', [], 'member_name', 'total'); renderNet([]);
+  renderHomeVisuals({}, []); aiLoadSettings(); aiLoadHistory();
+  byId('reviewAction').addEventListener('click', () => switchPage('settle'));
+  await loadGroups();
+  if(!_dbAvailable && REQUIRE_PRIVACY_CONSENT && !getStoredConsent()){ openConsentModal(); byId('runStatus').textContent = 'Consent required before the first run.'; return; }
+  runPipeline();
+}
 boot();
 </script>
 </body>
