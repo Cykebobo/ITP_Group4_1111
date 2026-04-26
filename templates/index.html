@@ -1062,7 +1062,7 @@ async function runPipeline(){
   const members = data.dashboard?.who_paid_what || [];
   const refreshedAt = data.refresh?.refreshed_at ? new Date(data.refresh.refreshed_at) : new Date();
 
-  renderBillDeck(upcoming, payload.transactions || []); renderSettlements(settlements, names); renderAlerts(alerts); renderNotifications(data.notifications || []); renderInsights(data.insights || []); renderBars('cat', data.dashboard?.chart_data?.by_category || [], 'category', 'total'); renderBars('paid', data.dashboard?.chart_data?.by_member_paid || [], 'member_name', 'total'); renderNet(data.dashboard?.net_balance || []); renderHomeVisuals(data, alerts); updateFocus(data, names, settlements);
+  renderBillDeck(upcoming, []); renderSettlements(settlements, names); renderAlerts(alerts); renderNotifications(data.notifications || []); renderInsights(data.insights || []); renderBars('cat', data.dashboard?.chart_data?.by_category || [], 'category', 'total'); renderBars('paid', data.dashboard?.chart_data?.by_member_paid || [], 'member_name', 'total'); renderNet(data.dashboard?.net_balance || []); renderHomeVisuals(data, alerts); updateFocus(data, names, settlements);
 
   byId('runStatus').classList.remove('pulse');
   byId('runStatus').textContent = `Updated ${refreshedAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} · ${members.length} members · ${(data.detected_shared_bills || []).length} shared bills analysed`;
