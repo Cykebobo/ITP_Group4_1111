@@ -477,6 +477,7 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
                 "reason": reason,
                 "suggested_due_date": _due_date(category, tx_date),
                 "source_transaction_id": tx_id,
+                "amount": amount,
             }
         )
 
@@ -551,6 +552,7 @@ def build_gfm(body: dict[str, Any]) -> tuple[dict[str, Any], int]:
             "category": d["category"],
             "due_date": d["suggested_due_date"],
             "related_transaction_id": d["source_transaction_id"],
+            "amount": d["amount"],
         }
         for d in sorted(detected_shared_bills, key=lambda x: (x["suggested_due_date"], x["source_transaction_id"]))
     ]

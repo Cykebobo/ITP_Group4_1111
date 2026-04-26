@@ -711,7 +711,7 @@ function buildBillEntries(upcoming, transactions){
       dueDate: item.due_date || tx.date || '--',
       name: sourceName,
       shortName: sourceName.length > 20 ? sourceName.slice(0, 20) + '…' : sourceName,
-      amount: Number(tx.amount || 0),
+      amount: Number(item.amount || tx.amount || 0),
       memberCount: 4,
       icon: iconMap[category] || '🧾'
     };
