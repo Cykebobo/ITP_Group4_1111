@@ -502,7 +502,7 @@ Bostjan: Solution and AI lead</div>
             <section class="section"><div class="bill-shell"><div class="bill-stage"><div id="billDeck" class="bill-carousel"></div></div></div></section>
 
             <section class="hero glass">
-              <div id="heroKicker" class="hero-kicker">Notification</div>
+              <div id="heroKicker" class="hero-kicker">Suggestion</div>
               <div id="heroTotal" class="hero-total">Ready</div>
               <p id="heroMeta" class="hero-meta"></p>
               <div class="hero-row" style="display:none">
@@ -990,8 +990,8 @@ function updateFocus(data, names, settlements){
   if(settlement){
     const fromName = names[settlement.from_member_id] || settlement.from_member_id;
     const toName = names[settlement.to_member_id] || settlement.to_member_id;
-    byId('heroKicker').textContent = 'Notification';
-    byId('heroTotal').textContent = `${fromName} pays ${toName} ${money(settlement.amount)}`;
+    byId('heroKicker').textContent = 'Suggestion';
+    byId('heroTotal').textContent = `${fromName} owes ${toName} ${money(settlement.amount)}`;
     byId('heroMeta').textContent = '';
     byId('reviewAction').textContent = 'Go to settlement';
   } else if (fairness){
