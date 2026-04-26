@@ -229,6 +229,12 @@
     .bar-track{height:10px;border-radius:999px;background:#fff;overflow:hidden;border:2px solid rgba(115,176,143,.92)}
     .bar-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--brand-2),var(--brand));border:2px solid rgba(46,145,94,.96);box-shadow:0 0 14px rgba(67,203,138,.20)}
     .bar-pct{font-size:11px;color:#6b9e82;font-weight:600;margin-left:auto;padding-left:6px;white-space:nowrap}
+    .vbar-chart{display:flex;gap:8px;align-items:flex-end;padding:4px 0 0}
+    .vbar-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+    .vbar-pct{font-size:10px;font-weight:700;color:#2e9163;white-space:nowrap}
+    .vbar-col{width:100%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--brand),var(--brand-2));min-height:4px}
+    .vbar-label{font-size:9px;color:#444;text-align:center;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize;margin-top:5px}
+    .vbar-amt{font-size:9px;font-weight:600;color:#000;white-space:nowrap}
 
     .grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
     .list{display:flex;flex-direction:column;gap:10px}
@@ -925,6 +931,7 @@ function renderInsights(insights){ const root = byId('insights'); if(!insights |
       </article>
     </div>`; }
 function renderBars(id, items, nameKey, valueKey){ const root = byId(id); if(!items || !items.length){ root.innerHTML = emptyState('No data available.'); return; } const total = Math.max(1, items.reduce((sum, item) => sum + Number(item[valueKey] || 0), 0)); root.innerHTML = items.map((item) => { const value = Number(item[valueKey] || 0); const pct = Math.round((value / total) * 100); const width = Math.max(2, pct); return `<article class="bar-card"><div class="bar-head"><span>${item[nameKey]}</span><strong>${money(value)}</strong><span class="bar-pct">${pct}%</span></div><div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div></article>`; }).join(''); }
+function renderCategoryBars(id, items, nameKey, valueKey){ const root = byId(id); if(!items || !items.length){ root.innerHTML = emptyState('No data available.'); return; } const total = Math.max(1, items.reduce((s, i) => s + Number(i[valueKey]||0), 0)); const maxVal = Math.max(1, ...items.map(i => Number(i[valueKey]||0))); const maxH = 90; root.innerHTML = `<div class="vbar-chart">${items.map(item => { const v = Number(item[valueKey]||0); const pct = Math.round((v/total)*100); const h = Math.max(4, Math.round((v/maxVal)*maxH)); return `<div class="vbar-item"><div class="vbar-pct">${pct}%</div><div class="vbar-col" style="height:${h}px"></div><div class="vbar-label">${item[nameKey]}</div><div class="vbar-amt">${money(v)}</div></div>`; }).join('')}</div>`; }
 function renderNet(net){ const root = byId('net'); if(!net || !net.length){ root.innerHTML = emptyState('No balances yet.'); return; } const max = Math.max(1, ...net.map((item) => Math.abs(Number(item.net || 0)))); root.innerHTML = `<div class="net-grid">${net.map((item) => { const value = Number(item.net || 0); const width = Math.max(8, Math.round((Math.abs(value) / max) * 100)); const positive = value >= 0; return `<article class="net-card"><div class="net-name">${item.member_name}</div><div class="net-track"><div class="net-fill ${positive ? 'positive' : 'negative'}" style="width:${width}%"></div></div><div class="net-value ${positive ? 'positive' : 'negative'}">${positive ? '+' : ''}${money(value)}</div></article>`; }).join('')}</div>`; }
 
 function renderHomeVisuals(data, alerts){
@@ -1061,7 +1068,7 @@ async function runPipeline(){
   const members = data.dashboard?.who_paid_what || [];
   const refreshedAt = data.refresh?.refreshed_at ? new Date(data.refresh.refreshed_at) : new Date();
 
-  renderBillDeck(upcoming, []); renderSettlements(settlements, names); renderAlerts(alerts); renderNotifications(data.notifications || []); renderInsights(data.insights || []); renderBars('cat', data.dashboard?.chart_data?.by_category || [], 'category', 'total'); renderBars('paid', data.dashboard?.chart_data?.by_member_paid || [], 'member_name', 'total'); renderNet(data.dashboard?.net_balance || []); renderHomeVisuals(data, alerts); updateFocus(data, names, settlements);
+  renderBillDeck(upcoming, []); renderSettlements(settlements, names); renderAlerts(alerts); renderNotifications(data.notifications || []); renderInsights(data.insights || []); renderCategoryBars('cat', data.dashboard?.chart_data?.by_category || [], 'category', 'total'); renderBars('paid', data.dashboard?.chart_data?.by_member_paid || [], 'member_name', 'total'); renderNet(data.dashboard?.net_balance || []); renderHomeVisuals(data, alerts); updateFocus(data, names, settlements);
 
   byId('runStatus').classList.remove('pulse');
   byId('runStatus').textContent = `Updated ${refreshedAt.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} · ${members.length} members · ${(data.detected_shared_bills || []).length} shared bills analysed`;
