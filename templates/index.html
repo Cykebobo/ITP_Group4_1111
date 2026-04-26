@@ -896,7 +896,6 @@ function renderAlerts(alerts){ const root = byId('alerts'); if(!alerts || !alert
     <article class="alert-card ${top.severity || 'low'}">
       <div class="alert-meta"><span class="badge ${badgeTone(top.severity)}">${titleCase(top.severity || 'medium')}</span></div>
       <div class="list-title">${topTitle}</div>
-      <div class="list-sub">${humanLabel(top.type || 'blocker')}</div>
     </article>
     ${next.length ? `<div class="notif-grid">${next.map((item) => `<article class="notif-card"><div class="list-title">${humanLabel(item.type || 'signal')}</div><div class="list-sub">${item.message}</div></article>`).join('')}</div>` : ''}`; }
 function renderNotifications(notifications){ const root = byId('notifications'); if(!notifications || !notifications.length){ root.innerHTML = emptyState('No messages queued.'); return; }
