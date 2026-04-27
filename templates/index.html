@@ -1362,14 +1362,13 @@ async function captureAndScan() {
   }
 
   byId('aiChatShell').classList.add('open');
-  aiPush('user', '📷 [Bill scan]');
-  aiPush('system', 'Scanning bill...');
+  aiPush('system', 'Reading receipt...');
 
   try {
     const res  = await fetch(`/api/groups/${_activeGroupId}/scan-bill`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ apiKey: cfg.apiKey, modelPreset: cfg.modelPreset, model: cfg.model, apiBase: cfg.apiBase, image: imageBase64 })
+      body: JSON.stringify({ apiKey: cfg.apiKey, image: imageBase64 })
     });
     const data = await res.json().catch(() => ({}));
     byId('aiMsgs').lastChild?.remove();
@@ -1377,11 +1376,22 @@ async function captureAndScan() {
       aiPush('system', `Scan error: ${data.message || data.error || 'request failed'}`);
       return;
     }
-    if (data.action === 'added_transaction') {
-      aiHistory.push({ role: 'assistant', content: data.message || 'Bill scanned and added.' });
-      aiSaveHistory();
-      aiRender();
-      runPipeline().catch(console.error);
+    if (data.action === 'preview') {
+      _scanPending = data.preview;
+      const p = data.preview;
+      const root = byId('aiMsgs');
+      const card = document.createElement('div');
+      card.className = 'ai-msg assistant';
+      card.id = 'scanPreviewCard';
+      card.innerHTML = `<div style="font-size:11px;opacity:.6;margin-bottom:5px">📷 Receipt scan — please confirm</div>`
+        + `<div style="margin-bottom:3px"><b>${p.payer_name}</b> paid <b>£${Number(p.amount).toFixed(2)}</b></div>`
+        + `<div style="font-size:12px;opacity:.7">${p.category}${p.note ? ' · ' + p.note : ''} · ${p.date}</div>`
+        + `<div style="display:flex;gap:7px;margin-top:10px">`
+        + `<button onclick="scanConfirm()" style="flex:1;padding:7px 0;border:none;border-radius:7px;background:linear-gradient(135deg,#43cb8a,#1a9e63);color:#fff;font-weight:700;font-size:13px;cursor:pointer">✓ Add</button>`
+        + `<button onclick="scanCancel()" style="flex:1;padding:7px 0;border:none;border-radius:7px;background:#f0f0f0;color:#555;font-size:13px;cursor:pointer">✗ Cancel</button>`
+        + `</div>`;
+      root.appendChild(card);
+      root.scrollTop = root.scrollHeight;
     } else {
       aiPush('system', data.message || 'Could not extract transaction from image.');
     }
@@ -1389,6 +1399,41 @@ async function captureAndScan() {
     byId('aiMsgs').lastChild?.remove();
     aiPush('system', `Error: ${String(err)}`);
   }
+}
+
+let _scanPending = null;
+async function scanConfirm() {
+  if (!_scanPending) return;
+  const preview = _scanPending;
+  _scanPending = null;
+  byId('scanPreviewCard')?.remove();
+  aiPush('system', 'Adding...');
+  const cfg = aiGetSettings();
+  try {
+    const res = await fetch(`/api/groups/${_activeGroupId}/confirm-bill`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(preview)
+    });
+    const data = await res.json().catch(() => ({}));
+    byId('aiMsgs').lastChild?.remove();
+    if (!res.ok || !data.ok) {
+      aiPush('system', `Error: ${data.message || data.error}`);
+      return;
+    }
+    aiHistory.push({ role: 'assistant', content: data.message });
+    aiSaveHistory();
+    aiRender();
+    runPipeline().catch(console.error);
+  } catch(err) {
+    byId('aiMsgs').lastChild?.remove();
+    aiPush('system', `Error: ${String(err)}`);
+  }
+}
+function scanCancel() {
+  _scanPending = null;
+  byId('scanPreviewCard')?.remove();
+  aiPush('system', 'Scan cancelled.');
 }
 
 byId('aiScanBtn').onclick  = openScanModal;

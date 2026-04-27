@@ -1534,7 +1534,7 @@ def api_group_ai_command(gid):
 
 @app.post("/api/groups/<gid>/scan-bill")
 def api_scan_bill(gid):
-    """Extract transaction from a bill photo using OpenAI vision and insert it."""
+    """Extract transaction info from a bill photo — preview only, does NOT insert."""
     if not _DB_ENABLED:
         return _error("database_not_configured", 503)
     body = request.get_json(silent=True) or {}
@@ -1545,7 +1545,6 @@ def api_scan_bill(gid):
     if not image_base64:
         return jsonify({"ok": False, "error": "missing_image"}), 400
 
-    # Vision requires OpenAI; ignore modelPreset and always use gpt-4o-mini
     vision_api_base = "https://api.openai.com/v1"
     vision_model = "gpt-4o-mini"
 
@@ -1572,7 +1571,7 @@ def api_scan_bill(gid):
         '{"action":"add_transaction","payer_name":"<member name>","amount":<number>,"category":"<rent|groceries|utilities|subscription|other>","date":"<YYYY-MM-DD>","note":"<short description>"}\n\n'
         "If you cannot determine a valid transaction, respond with ONLY: {\"action\":\"none\",\"reason\":\"<why>\"}\n\n"
         "Rules:\n"
-        "- amount: use the TOTAL line on the receipt (the final amount paid, not subtotal, not individual item prices, not tax, not change)\n"
+        "- amount: use the TOTAL line on the receipt (final amount paid, not subtotal, not individual items, not tax, not change)\n"
         "- payer_name: pick the most appropriate group member\n"
         "- date: use the receipt date if visible, otherwise today\n"
         "- note: brief description of what was purchased\n"
@@ -1629,8 +1628,8 @@ def api_scan_bill(gid):
             payer_display = m["name"]
             break
     if not payer_id:
-        return jsonify({"ok": False, "error": "member_not_found",
-                        "message": f"Member '{parsed_cmd.get('payer_name')}' not found. Group has: {member_names}."})
+        payer_id = members[0]["id"]
+        payer_display = members[0]["name"]
 
     amount = _round2(_to_num(parsed_cmd.get("amount"), -1))
     if amount <= 0:
@@ -1640,12 +1639,40 @@ def api_scan_bill(gid):
     if category not in VALID_CATEGORIES:
         category = "other"
     tx_date = str(parsed_cmd.get("date") or today)
-    note = str(parsed_cmd.get("note") or "").strip() or None
-    tid = f"t{int(datetime.now(UTC).timestamp() * 1000)}"
+    note = str(parsed_cmd.get("note") or "").strip()
 
-    conn2 = _get_conn()
+    return jsonify({"ok": True, "action": "preview", "preview": {
+        "payer_id": payer_id,
+        "payer_name": payer_display,
+        "amount": amount,
+        "category": category,
+        "date": tx_date,
+        "note": note,
+    }})
+
+
+@app.post("/api/groups/<gid>/confirm-bill")
+def api_confirm_bill(gid):
+    """Insert a pre-validated transaction (called after user confirms the scan preview)."""
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = request.get_json(silent=True) or {}
+    payer_id   = str(body.get("payer_id") or "").strip()
+    payer_name = str(body.get("payer_name") or "").strip()
+    amount     = _round2(_to_num(body.get("amount"), -1))
+    category   = str(body.get("category") or "other").lower()
+    tx_date    = str(body.get("date") or date.today().isoformat())
+    note       = str(body.get("note") or "").strip() or None
+
+    if not payer_id or amount <= 0:
+        return jsonify({"ok": False, "error": "invalid_data"}), 400
+    if category not in VALID_CATEGORIES:
+        category = "other"
+
+    tid = f"t{int(datetime.now(UTC).timestamp() * 1000)}"
+    conn = _get_conn()
     try:
-        with conn2.cursor() as cur:
+        with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO gfm_transactions "
                 "(id, group_id, payer_member_id, amount, currency, category, date, note) "
@@ -1653,9 +1680,9 @@ def api_scan_bill(gid):
                 (tid, gid, payer_id, amount, category, tx_date, note),
             )
     finally:
-        conn2.close()
+        conn.close()
 
-    msg = f"Added: {payer_display} paid £{amount:.2f} for {category}"
+    msg = f"Added: {payer_name} paid £{amount:.2f} for {category}"
     if note:
         msg += f" · {note}"
     msg += f"  ({tx_date})"
