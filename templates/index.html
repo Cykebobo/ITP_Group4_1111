@@ -361,6 +361,23 @@
     .scan-capture{padding:12px 32px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;font-size:15px;font-weight:700;cursor:pointer}
     .scan-cancel{padding:12px 20px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer}
 
+    /* Dynamic Island */
+    .dyn-island{position:fixed;top:max(10px,env(safe-area-inset-top,10px));left:50%;transform:translateX(-50%);background:#000;border-radius:20px;z-index:9998;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;overflow:hidden;transition:width .38s cubic-bezier(.34,1.56,.64,1),height .38s cubic-bezier(.34,1.56,.64,1),border-radius .38s ease;width:130px;height:36px;-webkit-tap-highlight-color:transparent;user-select:none}
+    .dyn-island.popped{width:270px;height:56px;border-radius:30px}
+    .di-dot{width:7px;height:7px;border-radius:50%;background:#32d74b;flex-shrink:0;animation:dipulse 1.6s ease-in-out infinite}
+    @keyframes dipulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
+    .di-label{color:rgba(255,255,255,.0);font-size:12px;font-weight:600;white-space:nowrap;transition:color .18s ease .18s}
+    .dyn-island.popped .di-label{color:rgba(255,255,255,.88)}
+    .di-icon{font-size:15px;line-height:1}
+
+    /* Gesture mode */
+    .gesture-fab{position:fixed;left:18px;bottom:calc(var(--safe-bottom) + 88px);width:52px;height:52px;border:none;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid rgba(67,203,138,.55);box-shadow:0 4px 14px rgba(14,81,51,.12);cursor:pointer;z-index:12;font-size:22px;transition:background .25s,box-shadow .25s;display:flex;align-items:center;justify-content:center}
+    .gesture-fab.on{background:#111;box-shadow:0 4px 24px rgba(0,0,0,.4);border-color:#111}
+    .gesture-badge{position:fixed;top:max(54px,calc(env(safe-area-inset-top,10px)+44px));left:50%;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;font-size:11px;font-weight:600;padding:5px 14px;border-radius:20px;z-index:9997;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap}
+    .gesture-badge.show{opacity:1}
+    .gesture-vid{position:fixed;bottom:calc(var(--safe-bottom)+148px);left:14px;width:88px;height:66px;border-radius:10px;overflow:hidden;border:2px solid #43cb8a;display:none;transform:scaleX(-1);object-fit:cover}
+    .gesture-vid.show{display:block}
+
     .ai-settings{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(17,25,20,.20);backdrop-filter:blur(6px);z-index:45}
     .ai-settings.show{display:flex}
     .ai-settings-card{width:min(360px,100%);padding:14px;border-radius:18px;background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(245,251,247,.82));border:1px solid rgba(255,255,255,.9);box-shadow:0 18px 44px rgba(18,56,38,.22)}
@@ -451,6 +468,7 @@
       .screen{border-radius:0}
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="browser-side-note">Roles:
@@ -595,6 +613,18 @@ Bostjan: Solution and AI lead</div>
           </button>
         </nav>
       </div>
+      <!-- Dynamic Island -->
+      <div id="dynIsland" class="dyn-island">
+        <span class="di-dot"></span>
+        <span class="di-icon">📷</span>
+        <span class="di-label">Double-tap to scan</span>
+      </div>
+
+      <!-- Gesture mode -->
+      <button id="gestureFab" class="gesture-fab" type="button" title="Hand gesture control">🖐️</button>
+      <div id="gestureBadge" class="gesture-badge"></div>
+      <video id="gestureVid" class="gesture-vid" autoplay playsinline muted></video>
+
       <button id="aiFab" class="ai-fab" type="button" aria-label="Open AI chat" onclick="byId('aiChatShell').classList.toggle('open'); if(byId('aiChatShell').classList.contains('open')) byId('aiInput').focus();">AI</button>
       <section id="aiChatShell" class="ai-chat-shell" aria-live="polite">
         <header class="ai-head">
@@ -1593,5 +1623,107 @@ async function boot(){
 }
 boot();
 </script>
+  <script>
+  // ── Dynamic Island double-tap → scan ──────────────────────────────────────
+  (function(){
+    const di = byId('dynIsland');
+    let lastTap = 0;
+    function onDiTap(){
+      const now = Date.now();
+      if(now - lastTap < 380){
+        di.classList.add('popped');
+        setTimeout(() => di.classList.remove('popped'), 1100);
+        openScanModal();
+      }
+      lastTap = now;
+    }
+    di.addEventListener('click', onDiTap);
+    di.addEventListener('touchend', (e) => { e.preventDefault(); onDiTap(); }, { passive: false });
+  })();
+
+  // ── Hand gesture bill control ──────────────────────────────────────────────
+  let _gestureOn = false;
+  let _gestureStream = null;
+  let _gestureHands = null;
+  let _gestureTimer = null;
+  let _lastPalmX = null;
+  let _gestureCooldown = false;
+
+  function gestureSwipe(dir){ // dir: -1 left, +1 right
+    const deck = byId('billDeck');
+    if(!deck || !deck.querySelectorAll('.bill-card').length) return;
+    billTrackVelocity = dir * 20;
+    animateBillMomentum(deck);
+  }
+
+  function setBadge(msg, persist){
+    const b = byId('gestureBadge');
+    b.textContent = msg;
+    b.classList.add('show');
+    if(!persist){ clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove('show'), 2200); }
+  }
+
+  async function startGestureMode(){
+    const fab  = byId('gestureFab');
+    const vid  = byId('gestureVid');
+    setBadge('📡 Loading hand model…', true);
+    try {
+      _gestureStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:320, height:240 }, audio:false });
+      vid.srcObject = _gestureStream;
+      vid.classList.add('show');
+
+      const mp = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
+      mp.setOptions({ maxNumHands:1, modelComplexity:0, minDetectionConfidence:0.7, minTrackingConfidence:0.5 });
+      mp.onResults(results => {
+        if(!_gestureOn) return;
+        const lms = results.multiHandLandmarks;
+        if(!lms || !lms.length){ _lastPalmX = null; return; }
+        const palmX = lms[0][0].x; // wrist landmark, normalized 0..1
+        if(_lastPalmX !== null && !_gestureCooldown){
+          const delta = palmX - _lastPalmX;
+          if(Math.abs(delta) > 0.10){
+            gestureSwipe(delta < 0 ? -1 : 1);
+            _gestureCooldown = true;
+            _lastPalmX = null;
+            setTimeout(() => { _gestureCooldown = false; }, 850);
+            return;
+          }
+        }
+        _lastPalmX = palmX;
+      });
+
+      _gestureHands = mp;
+      _gestureOn = true;
+      fab.classList.add('on');
+      fab.textContent = '✋';
+      setBadge('✋ Gesture on — swipe hand ← →', true);
+
+      _gestureTimer = setInterval(async () => {
+        if(!_gestureOn || !_gestureHands || vid.readyState < 2) return;
+        try { await _gestureHands.send({ image: vid }); } catch(_){}
+      }, 80); // ~12fps, enough for gesture
+
+    } catch(e){
+      setBadge('Camera denied: ' + e.message);
+      stopGestureMode();
+    }
+  }
+
+  function stopGestureMode(){
+    _gestureOn = false;
+    clearInterval(_gestureTimer); _gestureTimer = null;
+    if(_gestureStream){ _gestureStream.getTracks().forEach(t => t.stop()); _gestureStream = null; }
+    const vid = byId('gestureVid');
+    vid.srcObject = null; vid.classList.remove('show');
+    byId('gestureFab').classList.remove('on');
+    byId('gestureFab').textContent = '🖐️';
+    byId('gestureBadge').classList.remove('show');
+    _lastPalmX = null; _gestureCooldown = false;
+  }
+
+  byId('gestureFab').addEventListener('click', () => {
+    _gestureOn ? stopGestureMode() : startGestureMode();
+  });
+  </script>
 </body>
 </html>
