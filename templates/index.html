@@ -1045,13 +1045,8 @@ function updateFocus(data, names, settlements){
     byId('reviewAction').textContent = 'Review cycle';
   }
 
-  if(highAlert){
-    byId('attentionSummary').textContent = '';
-    byId('attentionCopy').textContent = '';
-  } else {
-    byId('attentionSummary').textContent = '';
-    byId('attentionCopy').textContent = '';
-  }
+  { const el = byId('attentionSummary'); if(el) el.textContent = ''; }
+  { const el = byId('attentionCopy');   if(el) el.textContent = ''; }
 
   if(insight){
     byId('aiSummary').textContent = '';
