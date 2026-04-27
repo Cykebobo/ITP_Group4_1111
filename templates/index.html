@@ -352,6 +352,14 @@
     .ai-compose{padding:9px;border-top:1px solid rgba(180,201,188,.56);display:flex;gap:7px}
     .ai-compose textarea{flex:1;min-height:40px;max-height:110px;resize:vertical;padding:9px 10px;border-radius:9px;border:1px solid rgba(170,192,179,.82);outline:none;background:#fff}
     .ai-send{border:none;border-radius:9px;padding:9px 10px;background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;font-weight:700;cursor:pointer}
+    .ai-scan-btn{flex:0 0 auto;border:1px solid rgba(170,192,179,.82);border-radius:9px;padding:9px 10px;background:#f0f7f3;color:#2f5f48;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:17px;line-height:1}
+    .scan-overlay{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.86);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+    .scan-overlay.open{display:flex}
+    .scan-hint{color:rgba(255,255,255,.6);font-size:12px;text-align:center;max-width:320px}
+    .scan-video{width:min(380px,90vw);border-radius:14px;background:#000;display:block;transform:scaleX(-1)}
+    .scan-actions{display:flex;gap:10px}
+    .scan-capture{padding:12px 32px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+    .scan-cancel{padding:12px 20px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer}
 
     .ai-settings{position:absolute;inset:0;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(17,25,20,.20);backdrop-filter:blur(6px);z-index:45}
     .ai-settings.show{display:flex}
@@ -597,10 +605,21 @@ Bostjan: Solution and AI lead</div>
           <div class="ai-msg assistant">Tap AI and set API key first.</div>
         </div>
         <div class="ai-compose">
+          <button id="aiScanBtn" class="ai-scan-btn" type="button" title="Scan bill with camera">📷</button>
           <textarea id="aiInput" placeholder="Message AI..."></textarea>
           <button id="aiSend" class="ai-send" type="button">Send</button>
         </div>
       </section>
+
+      <div id="scanOverlay" class="scan-overlay">
+        <div class="scan-hint">Point camera at your bill and tap Capture</div>
+        <video id="scanVideo" class="scan-video" autoplay playsinline muted></video>
+        <canvas id="scanCanvas" style="display:none"></canvas>
+        <div class="scan-actions">
+          <button id="scanCapture" class="scan-capture" type="button">Capture</button>
+          <button id="scanCancel" class="scan-cancel" type="button">Cancel</button>
+        </div>
+      </div>
 
       <div id="aiSettings" class="ai-settings">
         <div class="ai-settings-card">
@@ -1298,6 +1317,89 @@ byId('aiFab').onclick = () => {
   if(byId('aiChatShell').classList.contains('open')) byId('aiInput').focus();
 };
 byId('aiSend').onclick = aiSend;
+
+// ── Camera scan ──────────────────────────────────────────────────────────────
+let _scanStream = null;
+
+async function openScanModal() {
+  const overlay = byId('scanOverlay');
+  const video   = byId('scanVideo');
+  overlay.classList.add('open');
+  try {
+    _scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+    video.srcObject = _scanStream;
+  } catch(e) {
+    closeScanModal();
+    byId('aiChatShell').classList.add('open');
+    aiPush('system', 'Camera access denied: ' + e.message);
+  }
+}
+
+function closeScanModal() {
+  byId('scanOverlay').classList.remove('open');
+  if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); _scanStream = null; }
+  byId('scanVideo').srcObject = null;
+}
+
+async function captureAndScan() {
+  const video  = byId('scanVideo');
+  const canvas = byId('scanCanvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.translate(canvas.width, 0);
+  ctx.scale(-1, 1);
+  ctx.drawImage(video, 0, 0);
+  const imageBase64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  closeScanModal();
+
+  const cfg = aiGetSettings();
+  if (!cfg.apiKey) {
+    byId('aiChatShell').classList.add('open');
+    aiPush('system', 'Set API key first.');
+    byId('aiSettings').classList.add('show');
+    return;
+  }
+  if (!_activeGroupId) {
+    byId('aiChatShell').classList.add('open');
+    aiPush('system', 'No active group selected.');
+    return;
+  }
+
+  byId('aiChatShell').classList.add('open');
+  aiPush('user', '📷 [Bill scan]');
+  aiPush('system', 'Scanning bill...');
+
+  try {
+    const res  = await fetch(`/api/groups/${_activeGroupId}/scan-bill`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ apiKey: cfg.apiKey, modelPreset: cfg.modelPreset, model: cfg.model, apiBase: cfg.apiBase, image: imageBase64 })
+    });
+    const data = await res.json().catch(() => ({}));
+    byId('aiMsgs').lastChild?.remove();
+    if (!res.ok || !data.ok) {
+      aiPush('system', `Scan error: ${data.message || data.error || 'request failed'}`);
+      return;
+    }
+    if (data.action === 'added_transaction') {
+      aiHistory.push({ role: 'assistant', content: data.message || 'Bill scanned and added.' });
+      aiSaveHistory();
+      aiRender();
+      await runPipeline();
+    } else {
+      aiPush('system', data.message || 'Could not extract transaction from image.');
+    }
+  } catch(err) {
+    byId('aiMsgs').lastChild?.remove();
+    aiPush('system', `Error: ${String(err)}`);
+  }
+}
+
+byId('aiScanBtn').onclick  = openScanModal;
+byId('scanCapture').onclick = captureAndScan;
+byId('scanCancel').onclick  = closeScanModal;
+
 byId('aiInput').addEventListener('keydown', (e) => {
   if(e.key === 'Enter' && !e.shiftKey){
     e.preventDefault();

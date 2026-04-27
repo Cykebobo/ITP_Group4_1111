@@ -1532,6 +1532,131 @@ def api_group_ai_command(gid):
     return jsonify({"ok": True, "action": "added_transaction", "id": tid, "message": msg})
 
 
+@app.post("/api/groups/<gid>/scan-bill")
+def api_scan_bill(gid):
+    """Extract transaction from a bill photo using OpenAI vision and insert it."""
+    if not _DB_ENABLED:
+        return _error("database_not_configured", 503)
+    body = request.get_json(silent=True) or {}
+    api_key = str(body.get("apiKey") or "").strip()
+    if not api_key:
+        return jsonify({"ok": False, "error": "missing_api_key"}), 400
+    image_base64 = str(body.get("image") or "").strip()
+    if not image_base64:
+        return jsonify({"ok": False, "error": "missing_image"}), 400
+
+    # Vision requires OpenAI; ignore modelPreset and always use gpt-4o-mini
+    vision_api_base = "https://api.openai.com/v1"
+    vision_model = "gpt-4o-mini"
+
+    conn = _get_conn()
+    members = []
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id, name FROM gfm_members WHERE group_id=%s", (gid,))
+            members = [{"id": r["id"], "name": r["name"]} for r in cur.fetchall()]
+    finally:
+        conn.close()
+
+    if not members:
+        return jsonify({"ok": True, "action": "none", "message": "No members in this group yet."})
+
+    member_names = ", ".join(m["name"] for m in members)
+    today = date.today().isoformat()
+
+    system_prompt = (
+        f"You are a data entry assistant for a group finance app.\n"
+        f"Group members: {member_names}\n"
+        f"Today: {today}\n\n"
+        "The user photographed a bill or receipt. Extract the transaction and respond with ONLY this JSON:\n"
+        '{"action":"add_transaction","payer_name":"<member name>","amount":<number>,"category":"<rent|groceries|utilities|subscription|other>","date":"<YYYY-MM-DD>","note":"<short description>"}\n\n'
+        "If you cannot determine a valid transaction, respond with ONLY: {\"action\":\"none\",\"reason\":\"<why>\"}\n\n"
+        "Rules: payer_name must match a listed member; amount is the total as a positive number; date is the bill date or today if not visible; no extra text outside the JSON."
+    )
+
+    req_body = json.dumps({
+        "model": vision_model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": [
+                {"type": "text", "text": "Extract the transaction details from this bill image."},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}", "detail": "low"}},
+            ]},
+        ],
+        "temperature": 0.1,
+        "max_tokens": 200,
+    }).encode("utf-8")
+
+    req_obj = urllib.request.Request(
+        f"{vision_api_base}/chat/completions",
+        data=req_body,
+        method="POST",
+        headers={"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"},
+    )
+    try:
+        with urllib.request.urlopen(req_obj, timeout=30) as resp:
+            llm_result = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            detail = json.loads(e.read().decode("utf-8"))
+        except Exception:
+            detail = {"message": str(e)}
+        return jsonify({"ok": False, "error": "provider_http_error", "detail": detail}), 502
+    except Exception as e:
+        return jsonify({"ok": False, "error": "provider_error", "detail": str(e)}), 502
+
+    try:
+        raw_reply = llm_result["choices"][0]["message"]["content"].strip()
+        json_match = re.search(r"\{.*\}", raw_reply, re.DOTALL)
+        parsed_cmd = json.loads(json_match.group()) if json_match else {"action": "none"}
+    except Exception:
+        parsed_cmd = {"action": "none"}
+
+    if str(parsed_cmd.get("action") or "") != "add_transaction":
+        reason = str(parsed_cmd.get("reason") or "Could not extract transaction from image.")
+        return jsonify({"ok": True, "action": "none", "message": reason})
+
+    payer_name_raw = str(parsed_cmd.get("payer_name") or "").strip().lower()
+    payer_id, payer_display = None, ""
+    for m in members:
+        if m["name"].lower() == payer_name_raw or m["name"].lower().startswith(payer_name_raw):
+            payer_id = m["id"]
+            payer_display = m["name"]
+            break
+    if not payer_id:
+        return jsonify({"ok": False, "error": "member_not_found",
+                        "message": f"Member '{parsed_cmd.get('payer_name')}' not found. Group has: {member_names}."})
+
+    amount = _round2(_to_num(parsed_cmd.get("amount"), -1))
+    if amount <= 0:
+        return jsonify({"ok": False, "error": "invalid_amount", "message": "Amount must be positive."})
+
+    category = str(parsed_cmd.get("category") or "other").lower()
+    if category not in VALID_CATEGORIES:
+        category = "other"
+    tx_date = str(parsed_cmd.get("date") or today)
+    note = str(parsed_cmd.get("note") or "").strip() or None
+    tid = f"t{int(datetime.now(UTC).timestamp() * 1000)}"
+
+    conn2 = _get_conn()
+    try:
+        with conn2.cursor() as cur:
+            cur.execute(
+                "INSERT INTO gfm_transactions "
+                "(id, group_id, payer_member_id, amount, currency, category, date, note) "
+                "VALUES (%s, %s, %s, %s, 'GBP', %s, %s, %s)",
+                (tid, gid, payer_id, amount, category, tx_date, note),
+            )
+    finally:
+        conn2.close()
+
+    msg = f"Added: {payer_display} paid £{amount:.2f} for {category}"
+    if note:
+        msg += f" · {note}"
+    msg += f"  ({tx_date})"
+    return jsonify({"ok": True, "action": "added_transaction", "id": tid, "message": msg})
+
+
 # ── Group messages ───────────────────────────────────────────────────────────
 
 @app.get("/api/groups/<gid>/messages")
