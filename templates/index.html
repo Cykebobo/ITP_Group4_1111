@@ -362,7 +362,7 @@
     .scan-cancel{padding:12px 20px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer}
 
     /* Dynamic Island */
-    .dyn-island{position:fixed;top:max(10px,env(safe-area-inset-top,10px));left:50%;transform:translateX(-50%);background:#000;border-radius:20px;z-index:9998;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;overflow:hidden;transition:width .38s cubic-bezier(.34,1.56,.64,1),height .38s cubic-bezier(.34,1.56,.64,1),border-radius .38s ease;width:130px;height:36px;-webkit-tap-highlight-color:transparent;user-select:none}
+    .dyn-island{position:fixed;top:max(10px,env(safe-area-inset-top,10px));left:50%;transform:translateX(-50%);background:#000;border-radius:20px;z-index:9998;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;overflow:hidden;transition:width .38s cubic-bezier(.34,1.56,.64,1),height .38s cubic-bezier(.34,1.56,.64,1),border-radius .38s ease;width:130px;height:36px;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:manipulation}
     .dyn-island.popped{width:270px;height:56px;border-radius:30px}
     .di-dot{width:7px;height:7px;border-radius:50%;background:#32d74b;flex-shrink:0;animation:dipulse 1.6s ease-in-out infinite}
     @keyframes dipulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
@@ -1628,17 +1628,17 @@ boot();
   (function(){
     const di = byId('dynIsland');
     let lastTap = 0;
-    function onDiTap(){
+    di.addEventListener('click', function(){
       const now = Date.now();
-      if(now - lastTap < 380){
+      if(now - lastTap < 500 && lastTap !== 0){
+        lastTap = 0;
         di.classList.add('popped');
         setTimeout(() => di.classList.remove('popped'), 1100);
         openScanModal();
+      } else {
+        lastTap = now;
       }
-      lastTap = now;
-    }
-    di.addEventListener('click', onDiTap);
-    di.addEventListener('touchend', (e) => { e.preventDefault(); onDiTap(); }, { passive: false });
+    });
   })();
 
   // ── Hand gesture bill control ──────────────────────────────────────────────
