@@ -1568,10 +1568,15 @@ def api_scan_bill(gid):
         f"You are a data entry assistant for a group finance app.\n"
         f"Group members: {member_names}\n"
         f"Today: {today}\n\n"
-        "The user photographed a bill or receipt. Extract the transaction and respond with ONLY this JSON:\n"
+        "The user photographed a bill or receipt. Read the image carefully and respond with ONLY this JSON:\n"
         '{"action":"add_transaction","payer_name":"<member name>","amount":<number>,"category":"<rent|groceries|utilities|subscription|other>","date":"<YYYY-MM-DD>","note":"<short description>"}\n\n'
         "If you cannot determine a valid transaction, respond with ONLY: {\"action\":\"none\",\"reason\":\"<why>\"}\n\n"
-        "Rules: payer_name must match a listed member; amount is the total as a positive number; date is the bill date or today if not visible; no extra text outside the JSON."
+        "Rules:\n"
+        "- amount: use the TOTAL line on the receipt (the final amount paid, not subtotal, not individual item prices, not tax, not change)\n"
+        "- payer_name: pick the most appropriate group member\n"
+        "- date: use the receipt date if visible, otherwise today\n"
+        "- note: brief description of what was purchased\n"
+        "- no extra text outside the JSON"
     )
 
     req_body = json.dumps({
@@ -1580,7 +1585,7 @@ def api_scan_bill(gid):
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": [
                 {"type": "text", "text": "Extract the transaction details from this bill image."},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}", "detail": "low"}},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_base64}", "detail": "high"}},
             ]},
         ],
         "temperature": 0.1,
