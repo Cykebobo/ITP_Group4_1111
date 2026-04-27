@@ -361,15 +361,6 @@
     .scan-capture{padding:12px 32px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--brand-2),var(--brand));color:#fff;font-size:15px;font-weight:700;cursor:pointer}
     .scan-cancel{padding:12px 20px;border:none;border-radius:12px;background:rgba(255,255,255,.15);color:#fff;font-size:14px;cursor:pointer}
 
-    /* Dynamic Island */
-    .dyn-island{position:fixed;top:max(10px,env(safe-area-inset-top,10px));left:50%;transform:translateX(-50%);background:#000;border-radius:20px;z-index:9998;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;overflow:hidden;transition:width .38s cubic-bezier(.34,1.56,.64,1),height .38s cubic-bezier(.34,1.56,.64,1),border-radius .38s ease;width:130px;height:36px;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:manipulation}
-    .dyn-island.popped{width:270px;height:56px;border-radius:30px}
-    .di-dot{width:7px;height:7px;border-radius:50%;background:#32d74b;flex-shrink:0;animation:dipulse 1.6s ease-in-out infinite}
-    @keyframes dipulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.8)}}
-    .di-label{color:rgba(255,255,255,.0);font-size:12px;font-weight:600;white-space:nowrap;transition:color .18s ease .18s}
-    .dyn-island.popped .di-label{color:rgba(255,255,255,.88)}
-    .di-icon{font-size:15px;line-height:1}
-
     /* Gesture mode */
     .gesture-fab{position:fixed;left:18px;bottom:calc(var(--safe-bottom) + 88px);width:52px;height:52px;border:none;border-radius:50%;background:rgba(255,255,255,.92);border:1px solid rgba(67,203,138,.55);box-shadow:0 4px 14px rgba(14,81,51,.12);cursor:pointer;z-index:12;font-size:22px;transition:background .25s,box-shadow .25s;display:flex;align-items:center;justify-content:center}
     .gesture-fab.on{background:#111;box-shadow:0 4px 24px rgba(0,0,0,.4);border-color:#111}
@@ -613,13 +604,6 @@ Bostjan: Solution and AI lead</div>
           </button>
         </nav>
       </div>
-      <!-- Dynamic Island -->
-      <div id="dynIsland" class="dyn-island">
-        <span class="di-dot"></span>
-        <span class="di-icon">📷</span>
-        <span class="di-label">Double-tap to scan</span>
-      </div>
-
       <!-- Gesture mode -->
       <button id="gestureFab" class="gesture-fab" type="button" title="Hand gesture control">🖐️</button>
       <div id="gestureBadge" class="gesture-badge"></div>
@@ -1624,23 +1608,6 @@ async function boot(){
 boot();
 </script>
   <script>
-  // ── Dynamic Island double-tap → scan ──────────────────────────────────────
-  (function(){
-    const di = byId('dynIsland');
-    let lastTap = 0;
-    di.addEventListener('click', function(){
-      const now = Date.now();
-      if(now - lastTap < 500 && lastTap !== 0){
-        lastTap = 0;
-        di.classList.add('popped');
-        setTimeout(() => di.classList.remove('popped'), 1100);
-        openScanModal();
-      } else {
-        lastTap = now;
-      }
-    });
-  })();
-
   // ── Hand gesture bill control ──────────────────────────────────────────────
   let _gestureOn = false;
   let _gestureStream = null;
