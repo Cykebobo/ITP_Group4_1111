@@ -459,7 +459,6 @@
       .screen{border-radius:0}
     }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="browser-side-note">Roles:
@@ -1608,18 +1607,20 @@ async function boot(){
 boot();
 </script>
   <script>
-  // ── Hand gesture bill control ──────────────────────────────────────────────
-  let _gestureOn = false;
-  let _gestureStream = null;
-  let _gestureHands = null;
-  let _gestureTimer = null;
-  let _lastPalmX = null;
-  let _gestureCooldown = false;
+  // ── Hand gesture bill control (frame-diff motion detection, no ML deps) ────
+  let _gestureOn      = false;
+  let _gestureStream  = null;
+  let _gestureTimer   = null;
+  let _gestureCooldown= false;
+  let _prevPixels     = null;
+  let _centroids      = [];   // rolling window of motion-centroid X (normalised)
+  let _gestureCanvas  = null;
+  let _gestureCtx     = null;
 
-  function gestureSwipe(dir){ // dir: -1 left, +1 right
+  function gestureSwipe(dir){ // -1 = hand right → cards left; +1 = hand left → cards right
     const deck = byId('billDeck');
     if(!deck || !deck.querySelectorAll('.bill-card').length) return;
-    billTrackVelocity = dir * 20;
+    billTrackVelocity = dir * 22;
     animateBillMomentum(deck);
   }
 
@@ -1627,51 +1628,75 @@ boot();
     const b = byId('gestureBadge');
     b.textContent = msg;
     b.classList.add('show');
-    if(!persist){ clearTimeout(b._t); b._t = setTimeout(() => b.classList.remove('show'), 2200); }
+    if(!persist){ clearTimeout(b._hideT); b._hideT = setTimeout(() => b.classList.remove('show'), 2400); }
+  }
+
+  function processGestureFrame(vid){
+    if(!_gestureOn || vid.readyState < 2) return;
+    const W = _gestureCanvas.width, H = _gestureCanvas.height;
+
+    // Draw raw (un-mirrored) frame for accurate direction tracking
+    _gestureCtx.drawImage(vid, 0, 0, W, H);
+    const curr = _gestureCtx.getImageData(0, 0, W, H).data;
+
+    if(!_prevPixels){ _prevPixels = curr.slice(); return; }
+
+    let xSum = 0, count = 0;
+    for(let i = 0; i < curr.length; i += 4){
+      const diff = (Math.abs(curr[i] - _prevPixels[i])
+                  + Math.abs(curr[i+1] - _prevPixels[i+1])
+                  + Math.abs(curr[i+2] - _prevPixels[i+2])) / 3;
+      if(diff > 22){
+        xSum += (i >> 2) % W;
+        count++;
+      }
+    }
+    _prevPixels = curr.slice();
+
+    if(count < 120){ _centroids = []; return; }   // not enough motion
+
+    // Front camera raw pixels: hand moves right in real world → x increases
+    // (browser front-cam is NOT pre-mirrored in pixel data)
+    const cx = xSum / count / W;  // 0..1, larger = hand moved right
+    _centroids.push(cx);
+    if(_centroids.length > 7) _centroids.shift();
+
+    if(_centroids.length >= 5 && !_gestureCooldown){
+      const delta = _centroids[_centroids.length - 1] - _centroids[0];
+      if(Math.abs(delta) > 0.20){
+        // delta > 0 → hand moved right in raw pixels → swipe cards left (-1)
+        gestureSwipe(delta > 0 ? -1 : 1);
+        _gestureCooldown = true;
+        _centroids = [];
+        setTimeout(() => { _gestureCooldown = false; }, 950);
+      }
+    }
   }
 
   async function startGestureMode(){
-    const fab  = byId('gestureFab');
-    const vid  = byId('gestureVid');
-    setBadge('📡 Loading hand model…', true);
+    const vid = byId('gestureVid');
+    setBadge('📷 Starting camera…', true);
     try {
-      _gestureStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:320, height:240 }, audio:false });
+      _gestureStream = await navigator.mediaDevices.getUserMedia(
+        { video:{ facingMode:'user', width:320, height:240 }, audio:false }
+      );
       vid.srcObject = _gestureStream;
       vid.classList.add('show');
 
-      const mp = new Hands({ locateFile: f => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}` });
-      mp.setOptions({ maxNumHands:1, modelComplexity:0, minDetectionConfidence:0.7, minTrackingConfidence:0.5 });
-      mp.onResults(results => {
-        if(!_gestureOn) return;
-        const lms = results.multiHandLandmarks;
-        if(!lms || !lms.length){ _lastPalmX = null; return; }
-        const palmX = lms[0][0].x; // wrist landmark, normalized 0..1
-        if(_lastPalmX !== null && !_gestureCooldown){
-          const delta = palmX - _lastPalmX;
-          if(Math.abs(delta) > 0.10){
-            gestureSwipe(delta < 0 ? -1 : 1);
-            _gestureCooldown = true;
-            _lastPalmX = null;
-            setTimeout(() => { _gestureCooldown = false; }, 850);
-            return;
-          }
-        }
-        _lastPalmX = palmX;
-      });
+      _gestureCanvas = document.createElement('canvas');
+      _gestureCanvas.width  = 160;
+      _gestureCanvas.height = 120;
+      _gestureCtx = _gestureCanvas.getContext('2d', { willReadFrequently: true });
 
-      _gestureHands = mp;
       _gestureOn = true;
-      fab.classList.add('on');
-      fab.textContent = '✋';
+      byId('gestureFab').classList.add('on');
+      byId('gestureFab').textContent = '✋';
       setBadge('✋ Gesture on — swipe hand ← →', true);
 
-      _gestureTimer = setInterval(async () => {
-        if(!_gestureOn || !_gestureHands || vid.readyState < 2) return;
-        try { await _gestureHands.send({ image: vid }); } catch(_){}
-      }, 80); // ~12fps, enough for gesture
+      _gestureTimer = setInterval(() => processGestureFrame(vid), 80); // ~12 fps
 
     } catch(e){
-      setBadge('Camera denied: ' + e.message);
+      setBadge('Camera denied');
       stopGestureMode();
     }
   }
@@ -1685,7 +1710,7 @@ boot();
     byId('gestureFab').classList.remove('on');
     byId('gestureFab').textContent = '🖐️';
     byId('gestureBadge').classList.remove('show');
-    _lastPalmX = null; _gestureCooldown = false;
+    _prevPixels = null; _centroids = [];
   }
 
   byId('gestureFab').addEventListener('click', () => {
