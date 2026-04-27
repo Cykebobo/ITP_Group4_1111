@@ -626,6 +626,7 @@ Bostjan: Solution and AI lead</div>
 
       <div id="scanOverlay" class="scan-overlay">
         <div class="scan-hint">Point camera at your bill and tap Capture</div>
+        <select id="scanCamSelect" style="margin-bottom:8px;padding:6px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.3);background:rgba(0,0,0,.5);color:#fff;font-size:13px;max-width:280px"></select>
         <video id="scanVideo" class="scan-video" autoplay playsinline muted></video>
         <canvas id="scanCanvas" style="display:none"></canvas>
         <div class="scan-actions">
@@ -1338,10 +1339,29 @@ let _scanStream = null;
 async function openScanModal() {
   const overlay = byId('scanOverlay');
   const video   = byId('scanVideo');
+  const sel     = byId('scanCamSelect');
   overlay.classList.add('open');
   try {
-    _scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
-    video.srcObject = _scanStream;
+    // Get permission first so device labels are populated
+    const initStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+    initStream.getTracks().forEach(t => t.stop());
+
+    // Enumerate all video devices
+    const devices = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    sel.innerHTML = devices.map((d, i) => `<option value="${d.deviceId}">${d.label || 'Camera ' + (i+1)}</option>`).join('');
+    sel.style.display = devices.length > 1 ? 'block' : 'none';
+
+    async function startCamera(deviceId) {
+      if (_scanStream) { _scanStream.getTracks().forEach(t => t.stop()); }
+      _scanStream = await navigator.mediaDevices.getUserMedia({
+        video: deviceId ? { deviceId: { exact: deviceId } } : true,
+        audio: false
+      });
+      video.srcObject = _scanStream;
+    }
+
+    await startCamera(devices[0]?.deviceId);
+    sel.onchange = () => startCamera(sel.value);
   } catch(e) {
     closeScanModal();
     byId('aiChatShell').classList.add('open');
