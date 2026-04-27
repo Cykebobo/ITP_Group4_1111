@@ -1618,8 +1618,9 @@ boot();
   let _gestureStream = null;
   let _gestureTimer  = null;
   let _prevPixels    = null;
-  let _prevCx        = null;   // previous frame's motion centroid X
-  let _stillFrames   = 0;      // consecutive frames with no motion
+  let _prevCx        = null;
+  let _smoothCx      = null;   // low-pass filtered centroid
+  let _stillFrames   = 0;
   let _gestureCanvas = null;
   let _gestureCtx    = null;
 
@@ -1654,29 +1655,31 @@ boot();
     const cards = deck.querySelectorAll('.bill-card');
     if(!cards.length) return;
 
-    if(count < 80){
-      // Hand stopped — snap to nearest card
+    if(count < 100){
       _stillFrames++;
-      if(_stillFrames === 5) settleBillTrack(deck); // ~400ms of stillness
-      _prevCx = null;
+      if(_stillFrames === 6) settleBillTrack(deck); // ~300ms stillness → snap
+      _prevCx = null; _smoothCx = null;
       return;
     }
     _stillFrames = 0;
 
-    const cx = xSum / count / W;  // 0..1 in raw camera space
+    const rawCx = xSum / count / W;  // 0..1, noisy
+
+    // Exponential low-pass filter to kill jitter (α=0.3: smooth but responsive)
+    _smoothCx = (_smoothCx !== null) ? _smoothCx * 0.7 + rawCx * 0.3 : rawCx;
+
     if(_prevCx !== null){
-      // delta > 0: hand moved right in raw pixels (user's left due to mirror)
-      // → billTrackOffset increases → deck scrolls right (previous card)
-      const delta = cx - _prevCx;
+      const delta = _smoothCx - _prevCx;
+      if(Math.abs(delta) < 0.004) return; // dead-zone: ignore micro-noise
       const sideGap = 72;
-      billTrackOffset -= delta * 280;  // scale: ~full sweep = ~2 cards
+      billTrackOffset -= delta * 300;
       const maxOff = 0;
       const minOff = -(cards.length - 1) * sideGap;
       billTrackOffset = Math.max(minOff, Math.min(maxOff, billTrackOffset));
       if(billRaf){ cancelAnimationFrame(billRaf); billRaf = null; }
       applyBillDeckLayout(deck);
     }
-    _prevCx = cx;
+    _prevCx = _smoothCx;
   }
 
   async function startGestureMode(){
@@ -1711,7 +1714,7 @@ boot();
     byId('gestureFab').classList.remove('on');
     byId('gestureFab').textContent = '🖐️';
     byId('gestureBadge').classList.remove('show');
-    _prevPixels = null; _prevCx = null; _stillFrames = 0;
+    _prevPixels = null; _prevCx = null; _smoothCx = null; _stillFrames = 0;
   }
 
   byId('gestureFab').addEventListener('click', () => {
