@@ -1607,22 +1607,15 @@ async function boot(){
 boot();
 </script>
   <script>
-  // ── Hand gesture bill control (frame-diff motion detection, no ML deps) ────
-  let _gestureOn      = false;
-  let _gestureStream  = null;
-  let _gestureTimer   = null;
-  let _gestureCooldown= false;
-  let _prevPixels     = null;
-  let _centroids      = [];   // rolling window of motion-centroid X (normalised)
-  let _gestureCanvas  = null;
-  let _gestureCtx     = null;
-
-  function gestureSwipe(dir){ // -1 = hand right → cards left; +1 = hand left → cards right
-    const deck = byId('billDeck');
-    if(!deck || !deck.querySelectorAll('.bill-card').length) return;
-    billTrackVelocity = dir * 22;
-    animateBillMomentum(deck);
-  }
+  // ── Hand gesture bill control — real-time follow ──────────────────────────
+  let _gestureOn     = false;
+  let _gestureStream = null;
+  let _gestureTimer  = null;
+  let _prevPixels    = null;
+  let _prevCx        = null;   // previous frame's motion centroid X
+  let _stillFrames   = 0;      // consecutive frames with no motion
+  let _gestureCanvas = null;
+  let _gestureCtx    = null;
 
   function setBadge(msg, persist){
     const b = byId('gestureBadge');
@@ -1635,42 +1628,49 @@ boot();
     if(!_gestureOn || vid.readyState < 2) return;
     const W = _gestureCanvas.width, H = _gestureCanvas.height;
 
-    // Draw raw (un-mirrored) frame for accurate direction tracking
     _gestureCtx.drawImage(vid, 0, 0, W, H);
     const curr = _gestureCtx.getImageData(0, 0, W, H).data;
 
     if(!_prevPixels){ _prevPixels = curr.slice(); return; }
 
+    // Find centroid of changed pixels
     let xSum = 0, count = 0;
     for(let i = 0; i < curr.length; i += 4){
-      const diff = (Math.abs(curr[i] - _prevPixels[i])
+      const diff = (Math.abs(curr[i]   - _prevPixels[i])
                   + Math.abs(curr[i+1] - _prevPixels[i+1])
                   + Math.abs(curr[i+2] - _prevPixels[i+2])) / 3;
-      if(diff > 22){
-        xSum += (i >> 2) % W;
-        count++;
-      }
+      if(diff > 20){ xSum += (i >> 2) % W; count++; }
     }
     _prevPixels = curr.slice();
 
-    if(count < 120){ _centroids = []; return; }   // not enough motion
+    const deck = byId('billDeck');
+    if(!deck) return;
+    const cards = deck.querySelectorAll('.bill-card');
+    if(!cards.length) return;
 
-    // Front camera raw pixels: hand moves right in real world → x increases
-    // (browser front-cam is NOT pre-mirrored in pixel data)
-    const cx = xSum / count / W;  // 0..1, larger = hand moved right
-    _centroids.push(cx);
-    if(_centroids.length > 7) _centroids.shift();
-
-    if(_centroids.length >= 5 && !_gestureCooldown){
-      const delta = _centroids[_centroids.length - 1] - _centroids[0];
-      if(Math.abs(delta) > 0.20){
-        // delta > 0 → hand moved right in raw pixels → swipe cards left (-1)
-        gestureSwipe(delta > 0 ? -1 : 1);
-        _gestureCooldown = true;
-        _centroids = [];
-        setTimeout(() => { _gestureCooldown = false; }, 950);
-      }
+    if(count < 80){
+      // Hand stopped — snap to nearest card
+      _stillFrames++;
+      if(_stillFrames === 5) settleBillTrack(deck); // ~400ms of stillness
+      _prevCx = null;
+      return;
     }
+    _stillFrames = 0;
+
+    const cx = xSum / count / W;  // 0..1 in raw camera space
+    if(_prevCx !== null){
+      // delta > 0: hand moved right in raw pixels (user's left due to mirror)
+      // → billTrackOffset increases → deck scrolls right (previous card)
+      const delta = cx - _prevCx;
+      const sideGap = 72;
+      billTrackOffset -= delta * 280;  // scale: ~full sweep = ~2 cards
+      const maxOff = 0;
+      const minOff = -(cards.length - 1) * sideGap;
+      billTrackOffset = Math.max(minOff, Math.min(maxOff, billTrackOffset));
+      if(billRaf){ cancelAnimationFrame(billRaf); billRaf = null; }
+      applyBillDeckLayout(deck);
+    }
+    _prevCx = cx;
   }
 
   async function startGestureMode(){
@@ -1682,19 +1682,14 @@ boot();
       );
       vid.srcObject = _gestureStream;
       vid.classList.add('show');
-
       _gestureCanvas = document.createElement('canvas');
-      _gestureCanvas.width  = 160;
-      _gestureCanvas.height = 120;
+      _gestureCanvas.width = 160; _gestureCanvas.height = 120;
       _gestureCtx = _gestureCanvas.getContext('2d', { willReadFrequently: true });
-
       _gestureOn = true;
       byId('gestureFab').classList.add('on');
       byId('gestureFab').textContent = '✋';
-      setBadge('✋ Gesture on — swipe hand ← →', true);
-
-      _gestureTimer = setInterval(() => processGestureFrame(vid), 80); // ~12 fps
-
+      setBadge('✋ Gesture on — move hand to scroll', true);
+      _gestureTimer = setInterval(() => processGestureFrame(vid), 50); // 20 fps
     } catch(e){
       setBadge('Camera denied');
       stopGestureMode();
@@ -1710,7 +1705,7 @@ boot();
     byId('gestureFab').classList.remove('on');
     byId('gestureFab').textContent = '🖐️';
     byId('gestureBadge').classList.remove('show');
-    _prevPixels = null; _centroids = [];
+    _prevPixels = null; _prevCx = null; _stillFrames = 0;
   }
 
   byId('gestureFab').addEventListener('click', () => {
