@@ -1552,7 +1552,7 @@ def api_scan_bill(gid):
         return jsonify({"ok": False, "error": "missing_image"}), 400
 
     vision_api_base = "https://api.openai.com/v1"
-    vision_model = "gpt-4o-mini"
+    vision_model = "gpt-4o"
 
     conn = _get_conn()
     members = []
