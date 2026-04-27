@@ -1270,7 +1270,7 @@ async function aiSend(){
         body: JSON.stringify({ apiKey:cfg.apiKey, modelPreset:cfg.modelPreset, model:cfg.model, apiBase:cfg.apiBase, text })
       });
       const cmdData = await cmdRes.json().catch(() => ({}));
-      if(cmdRes.ok && cmdData.ok && cmdData.action === 'added_transaction'){
+      if(cmdData.ok && cmdData.action === 'added_transaction'){
         byId('aiMsgs').lastChild?.remove();
         aiHistory.push({ role:'assistant', content: cmdData.message || 'Transaction added.' });
         aiSaveHistory();
@@ -1278,9 +1278,15 @@ async function aiSend(){
         runPipeline().catch(console.error);
         return;
       }
-      if(cmdRes.ok && !cmdData.ok && cmdData.error && cmdData.error !== 'member_not_found' && cmdData.action !== 'none'){
+      if(!cmdData.ok && cmdData.error && cmdData.error !== 'member_not_found' && cmdData.action !== 'none'){
         byId('aiMsgs').lastChild?.remove();
-        aiPush('system', `DB error: ${cmdData.message || cmdData.error}`);
+        const providerMsg = cmdData?.detail?.error?.message || cmdData?.detail?.message || '';
+        aiPush('system', `Error: ${cmdData.message || cmdData.error}${providerMsg ? ' · ' + providerMsg : ''}`);
+        return;
+      }
+      if(cmdData.ok && cmdData.action === 'none'){
+        byId('aiMsgs').lastChild?.remove();
+        aiPush('system', cmdData.reply || 'Not recognised as a transaction. Try: "Mason paid £50 for groceries"');
         return;
       }
     }

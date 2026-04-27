@@ -1445,13 +1445,18 @@ def api_group_ai_command(gid):
     today = date.today().isoformat()
 
     system_prompt = (
-        f"You are a data entry assistant for a group finance app.\n"
+        f"You are a data entry assistant for a group finance app. You understand English and Chinese.\n"
         f"Group members: {member_names}\n"
         f"Today: {today}\n\n"
-        "If the user message is a request to add a transaction, respond with ONLY this JSON:\n"
-        '{"action":"add_transaction","payer_name":"<member name>","amount":<number>,"category":"<rent|groceries|utilities|subscription|other>","date":"<YYYY-MM-DD>","note":"<description or empty string>"}\n\n'
-        "If it is NOT a request to add a transaction, respond with ONLY: {\"action\":\"none\"}\n\n"
-        "Rules: payer_name must match one of the listed members; amount is a positive number; date defaults to today if unspecified; no extra text outside the JSON."
+        "If the user message describes adding/recording a payment or expense, respond with ONLY this JSON (no markdown, no extra text):\n"
+        '{"action":"add_transaction","payer_name":"<member name>","amount":<number>,"category":"<rent|groceries|utilities|subscription|other>","date":"<YYYY-MM-DD>","note":"<short description>"}\n\n'
+        'If it is NOT about adding a payment, respond with ONLY: {"action":"none","reply":"<short helpful reply>"}\n\n'
+        "Rules:\n"
+        "- payer_name must be the closest match from the group members list\n"
+        "- If the user says 'I' or 'me', pick the first member as payer\n"
+        "- amount is a positive number (strip currency symbols)\n"
+        "- date defaults to today if unspecified\n"
+        "- Output raw JSON only, no code blocks"
     )
 
     req_obj = urllib.request.Request(
@@ -1488,7 +1493,8 @@ def api_group_ai_command(gid):
         parsed_cmd = {"action": "none"}
 
     if str(parsed_cmd.get("action") or "") != "add_transaction":
-        return jsonify({"ok": True, "action": "none"})
+        reply = str(parsed_cmd.get("reply") or "Not recognised as a transaction. Try: 'Mason paid £50 for groceries'")
+        return jsonify({"ok": True, "action": "none", "reply": reply})
 
     payer_name_raw = str(parsed_cmd.get("payer_name") or "").strip().lower()
     payer_id = None
