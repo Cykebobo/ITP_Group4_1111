@@ -1262,7 +1262,7 @@ async function aiSend(){
         aiHistory.push({ role:'assistant', content: cmdData.message || 'Transaction added.' });
         aiSaveHistory();
         aiRender();
-        await runPipeline();
+        runPipeline().catch(console.error);
         return;
       }
       if(cmdRes.ok && !cmdData.ok && cmdData.error && cmdData.error !== 'member_not_found' && cmdData.action !== 'none'){
@@ -1381,7 +1381,7 @@ async function captureAndScan() {
       aiHistory.push({ role: 'assistant', content: data.message || 'Bill scanned and added.' });
       aiSaveHistory();
       aiRender();
-      await runPipeline();
+      runPipeline().catch(console.error);
     } else {
       aiPush('system', data.message || 'Could not extract transaction from image.');
     }
